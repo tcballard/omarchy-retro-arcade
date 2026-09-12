@@ -19,9 +19,10 @@ enum Game {
     Snake,
     Bubble,
     Blast,
+    TwentyFortyEight,
 }
 impl Game {
-    const ALL: [Self; 9] = [
+    const ALL: [Self; 10] = [
         Self::Pinball,
         Self::Solitaire,
         Self::Scram,
@@ -31,6 +32,7 @@ impl Game {
         Self::Snake,
         Self::Bubble,
         Self::Blast,
+        Self::TwentyFortyEight,
     ];
     fn id(self) -> &'static str {
         match self {
@@ -43,6 +45,7 @@ impl Game {
             Self::Snake => "snake",
             Self::Bubble => "bubble",
             Self::Blast => "blast",
+            Self::TwentyFortyEight => "2048",
         }
     }
     fn name(self) -> &'static str {
@@ -56,6 +59,7 @@ impl Game {
             Self::Snake => "Snake",
             Self::Bubble => "Bubble",
             Self::Blast => "Blast",
+            Self::TwentyFortyEight => "2048",
         }
     }
     fn line(self) -> &'static str {
@@ -69,6 +73,7 @@ impl Game {
             Self::Snake => "Eat. Grow. Leave yourself a way out.",
             Self::Bubble => "Make three. Clear your head.",
             Self::Blast => "Make room. Leave an exit.",
+            Self::TwentyFortyEight => "Slide together. Make something bigger.",
         }
     }
     fn image(self) -> egui::ImageSource<'static> {
@@ -77,6 +82,7 @@ impl Game {
             Self::Snake => egui::include_image!("../../games/snake/docs/shelf.svg"),
             Self::Bubble => egui::include_image!("../../games/bubble/docs/game.png"),
             Self::Blast => egui::include_image!("../../games/blast/docs/game.png"),
+            Self::TwentyFortyEight => egui::include_image!("../../games/2048/docs/shelf.svg"),
             Self::Chess => egui::include_image!("../../games/chess/docs/preview.png"),
             Self::Solitaire => {
                 egui::include_image!("../../games/solitaire/docs/screenshots/table.png")
@@ -120,6 +126,7 @@ impl ArcadeGame for omarchy_blast::app::App {
         omarchy_blast::app::App::finished(self)
     }
 }
+impl ArcadeGame for omarchy_2048::app::App {}
 impl ArcadeGame for omarchy_chess::ui::ChessApp {}
 impl ArcadeGame for omarchy_solitaire::app::SolitaireApp {}
 impl ArcadeGame for omarchy_scram::app::ScramApp {}
@@ -175,6 +182,7 @@ impl Arcade {
                 Game::Snake => Box::new(omarchy_snake::app::SnakeApp::new()),
                 Game::Bubble => Box::new(omarchy_bubble::app::BubbleApp::new()),
                 Game::Blast => Box::new(omarchy_blast::app::App::new()),
+                Game::TwentyFortyEight => Box::new(omarchy_2048::app::App::new()?),
                 Game::Chess => {
                     let dir = omarchy_chess::storage::state_dir();
                     lock = Some(Box::new(omarchy_chess::storage::SessionLock::acquire(
@@ -318,6 +326,8 @@ impl eframe::App for Arcade {
         if self.about {
             egui::Window::new("About Omarchy Arcade").open(&mut self.about).show(ctx,|ui|{
             ui.heading("Omarchy Arcade");ui.label(concat!("Version ",env!("CARGO_PKG_VERSION")));ui.label("Native games. A community project for Omarchy.");
+            ui.hyperlink_to("2048: Avi Barit (avibarit)", "https://github.com/avibarit/2048");
+            ui.hyperlink_to("Original 2048: Gabriele Cirulli", "https://github.com/gabrielecirulli/2048");
             ui.label("Original game artwork and engines; credits and licences are included with the app.");ui.label("Ctrl+H returns to Arcade. Each game keeps its own controls and saves.");
         });
         }
@@ -363,7 +373,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
             "--help" | "-h" => {
-                println!("Omarchy Arcade\n--game chess|solitaire|scram|invaders|pinball|stack|snake|bubble|blast\n--screenshot PATH\n--compact\n--version\nCtrl+H: return to Arcade. Ctrl+Q: quit.");
+                println!("Omarchy Arcade\n--game chess|solitaire|scram|invaders|pinball|stack|snake|bubble|blast|2048\n--screenshot PATH\n--compact\n--version\nCtrl+H: return to Arcade. Ctrl+Q: quit.");
                 return Ok(());
             }
             "--game" => {

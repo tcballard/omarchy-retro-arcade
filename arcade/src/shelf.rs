@@ -14,6 +14,7 @@ impl Game {
             Self::Snake => "ARCADE / CLASSIC",
             Self::Bubble => "PUZZLE / 20 LEVELS",
             Self::Blast => "ARENA / SOLO + LOCAL",
+            Self::TwentyFortyEight => "PUZZLE / 2048",
         }
     }
     fn crop(self) -> Rect {
@@ -27,6 +28,7 @@ impl Game {
             Self::Snake => ([0., 0.], [1., 1.]),
             Self::Bubble => ([0.30, 0.10], [0.73, 0.93]),
             Self::Blast => ([0.07, 0.13], [0.93, 0.96]),
+            Self::TwentyFortyEight => ([0., 0.], [1., 1.]),
         };
         Rect::from_min_max(Pos2::from(a), Pos2::from(b))
     }
@@ -121,7 +123,7 @@ impl Arcade {
                 p.text(
                     r.right_top() + Vec2::new(0., 30.),
                     Align2::RIGHT_TOP,
-                    "Nine games. One more go.",
+                    format!("{} games. One more go.", Game::ALL.len()),
                     FontId::proportional(16.),
                     ink,
                 );

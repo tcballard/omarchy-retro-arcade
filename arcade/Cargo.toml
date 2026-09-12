@@ -20,5 +20,7 @@ omarchy-blast = { path = "../games/blast" }
 fs2 = "0.4"
 omarchy-bubble = { path = "../games/bubble" }
 
+omarchy-2048 = { path = "../games/2048" }
+
 [dev-dependencies]
 tempfile = "3"

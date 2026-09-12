@@ -12,10 +12,14 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Native dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libegl1-mesa-dev libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev libx11-dev libxi-dev libxcursor-dev libxrandr-dev libxtst6 xvfb stockfish desktop-file-utils python3-pil
+        run: sudo apt-get update && sudo apt-get install -y cmake libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libegl1-mesa-dev libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev libx11-dev libxi-dev libxcursor-dev libxrandr-dev libxtst6 xvfb stockfish desktop-file-utils python3-pil nodejs
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --locked --all-targets -- -D warnings
       - run: REQUIRE_STOCKFISH=1 cargo test --workspace --locked --all-targets
+      - name: 2048 upstream rules and parity
+        run: |
+          node games/2048/upstream/test-game-logic.js
+          node games/2048/verify-upstream.cjs
       - run: scripts/build.sh
       - run: ctest --test-dir build/pinball --output-on-failure -R 'theme-palette|theme-path|authored-upstream-table'
       - run: desktop-file-validate packaging/omarchy-retro-arcade.desktop
@@ -30,8 +34,10 @@ jobs:
         with:
           name: polish-review
           path: /tmp/arcade-polish/
-      - name: One window, nine games, existing saves
+      - name: One window, ten games, existing saves
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-check.py target/release/omarchy-retro-arcade
+      - name: 2048 controls, saves and credits
+        run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-2048.py target/release/omarchy-retro-arcade /tmp/arcade-renders/2048
       - name: Stack keyboard, pause, focus and saves
         run: xvfb-run -a -s '-screen 0 2400x1900x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-stack.py target/release/omarchy-retro-arcade /tmp/arcade-renders
       - name: Snake native controls, saves and layouts
@@ -41,7 +47,7 @@ jobs:
       - name: Capture the actual app
         run: |
           mkdir -p /tmp/arcade-renders
-          for game in chess solitaire scram invaders pinball stack snake bubble blast; do
+          for game in chess solitaire scram invaders pinball stack snake bubble blast 2048; do
             xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy XDG_STATE_HOME=/tmp/arcade-$game/state XDG_DATA_HOME=/tmp/arcade-$game/data XDG_CONFIG_HOME=/tmp/arcade-$game/config target/release/omarchy-retro-arcade --game "$game" --screenshot "/tmp/arcade-renders/$game.png"
           done
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 target/release/omarchy-retro-arcade --compact --screenshot /tmp/arcade-renders/shelf-compact.png

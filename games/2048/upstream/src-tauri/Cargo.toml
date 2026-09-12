@@ -1,0 +1,25 @@
+[package]
+name = "game-2048"
+version = "1.0.0"
+description = "Classic 2048 game — native desktop app"
+authors = ["avibarit"]
+license = "MIT"
+repository = "https://github.com/avibarit/2048"
+edition = "2021"
+rust-version = "1.77.2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[[bin]]
+name = "2048"
+path = "src/main.rs"

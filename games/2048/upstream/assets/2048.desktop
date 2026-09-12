@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=2048
+Comment=Join the tiles, get to 2048!
+Exec=2048
+Icon=2048
+Terminal=false
+Type=Application
+Categories=Game;PuzzleGame;
+Keywords=2048;puzzle;game;tiles;
+StartupWMClass=2048

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#faf8ef">
+  <title>2048</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>2048</h1>
+      <div class="scores">
+        <div class="score-container">
+          <div class="score-label">SCORE</div>
+          <div class="score-value" id="score">0</div>
+        </div>
+        <div class="score-container">
+          <div class="score-label">BEST</div>
+          <div class="score-value" id="best-score">0</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="above-game">
+      <p class="intro">
+        Join the tiles, get to <strong>2048</strong>!
+      </p>
+      <div class="game-buttons">
+        <button type="button" id="undo-btn" class="game-button game-button--secondary" disabled>Undo</button>
+        <button type="button" id="new-game-btn" class="game-button">New Game</button>
+      </div>
+    </div>
+
+    <div id="game-board" class="game-container" role="application" aria-label="2048 game board">
+      <div id="grid-container" class="grid-container" aria-hidden="true"></div>
+      <div id="tile-container" class="tile-container" aria-hidden="true"></div>
+
+      <div id="message-overlay" class="message-overlay" role="dialog" aria-modal="true" aria-labelledby="message-title">
+        <p id="message-title" class="message-title"></p>
+        <p id="message-subtitle" class="message-subtitle"></p>
+        <div id="message-buttons" class="message-buttons"></div>
+      </div>
+    </div>
+
+    <p class="instructions">
+      Use <strong>arrow keys</strong> (or WASD) to move tiles.
+      Swipe on mobile. Press <strong>U</strong> (or Ctrl+Z) to undo.
+      Merge matching numbers to reach <strong>2048</strong>!
+    </p>
+  </div>
+
+  <p id="game-status" class="visually-hidden" role="status" aria-live="polite"></p>
+
+  <script src="game.js"></script>
+</body>
+</html>

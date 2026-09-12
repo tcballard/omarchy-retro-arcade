@@ -2576,6 +2576,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "omarchy-2048"
+version = "0.1.0"
+dependencies = [
+ "arcade-presentation",
+ "eframe",
+ "omarchy-chess",
+ "rand 0.8.8",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "omarchy-blast"
 version = "0.1.0"
 dependencies = [
@@ -2640,6 +2653,7 @@ dependencies = [
  "egui_extras",
  "fs2",
  "image",
+ "omarchy-2048",
  "omarchy-blast",
  "omarchy-bubble",
  "omarchy-chess",

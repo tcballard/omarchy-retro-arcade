@@ -1,5 +1,6 @@
 [workspace]
-members = ["arcade", "games/chess", "games/solitaire", "games/scram", "games/invaders", "games/stack", "games/snake", "games/bubble", "games/blast", "shared/presentation", "shared/leaderboard", "services/leaderboard"]
+members = ["arcade", "games/chess", "games/solitaire", "games/scram", "games/invaders", "games/stack", "games/snake", "games/bubble", "games/blast", "games/2048", "shared/presentation", "shared/leaderboard", "services/leaderboard"]
+exclude = ["games/2048/upstream/src-tauri"]
 resolver = "2"
 
 [workspace.package]
