@@ -1,0 +1,48 @@
+name: Playtest feedback
+description: Tell us how Arcade feels on your desktop and what needs polish.
+title: "[Playtest] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Real desktop feedback helps us improve controls, sound, scaling, performance and difficulty.
+        Use Bug report for a specific reproducible failure; link it here if it also affected your session.
+  - type: input
+    id: games
+    attributes:
+      label: Games and modes played
+      description: Include roughly how long you played.
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Arcade version or build
+      description: Version, download / Actions run link or source commit; "unknown" is fine.
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Where did you play?
+      description: Include whatever you know. Say if this was an automated or headless run rather than hands-on play.
+      placeholder: |
+        Omarchy / Linux version:
+        Hardware and CPU architecture:
+        Desktop session (Wayland / X11 / unknown):
+        Theme and display scale:
+        Input device:
+    validations:
+      required: true
+  - type: textarea
+    id: feedback
+    attributes:
+      label: What felt good, and what needs work?
+      description: Consider responsiveness, readability, sound, difficulty, navigation and whether you wanted another go. Screenshots or recordings are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: lifecycle
+    attributes:
+      label: Saves and returning to play
+      description: If tried, what happened when pausing, switching games, closing / reopening Arcade or updating? Include related bug links.

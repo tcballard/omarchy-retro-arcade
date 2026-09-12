@@ -1,0 +1,40 @@
+name: Improvement or feature
+description: Suggest better controls, presentation, accessibility or app behaviour.
+title: "[Idea] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas and small quality-of-life improvements are welcome. Search existing issues first.
+        For a whole new game, use the New game proposal form.
+  - type: input
+    id: area
+    attributes:
+      label: Game or area
+      placeholder: e.g. Stack controls, collection navigation, sound, accessibility
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would this improve for players?
+      description: Describe the friction or opportunity, with a concrete example if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested behaviour
+      description: What should a player be able to do? A rough idea is enough.
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: What would a good result look like?
+      description: Optional examples, alternatives, sketches or a simple way to check the improvement.
+  - type: textarea
+    id: context
+    attributes:
+      label: Related work or constraints
+      description: Link related issues or decisions if known. Mention any effect on offline play, saves, controls or packaging.

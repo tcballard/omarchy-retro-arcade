@@ -1,0 +1,48 @@
+name: New game proposal
+description: Pitch a game for the shared Arcade app.
+title: "[Game] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        What would you love to play here? You do not need to be a developer to suggest a game.
+        Search existing proposals first. Arcade is one native app with offline play, local saves and shared navigation.
+        See the [integration decisions](https://github.com/tcballard/omarchy-retro-arcade/blob/main/DECISIONS.md) before starting a substantial implementation.
+  - type: input
+    id: game
+    attributes:
+      label: Game idea or working title
+    validations:
+      required: true
+  - type: textarea
+    id: pitch
+    attributes:
+      label: What is the game, and why would it fit Arcade?
+      description: Explain the core play loop and what would make someone want another go. Links to inspiration are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: first-version
+    attributes:
+      label: First playable version
+      description: Optional. Suggest essential rules, modes, controls, win / loss conditions and what can wait.
+  - type: textarea
+    id: integration
+    attributes:
+      label: App integration
+      description: Optional. Consider keyboard play, pause / resume, local records, sound, themes and returning to the collection.
+  - type: textarea
+    id: sources
+    attributes:
+      label: Existing code, art or sound
+      description: If proposing reused material, link its source and licence. It is fine to say original assets are needed or that the licence is unknown.
+  - type: dropdown
+    id: involvement
+    attributes:
+      label: Would you like to help?
+      multiple: true
+      options:
+        - Sharing an idea
+        - Playtesting
+        - Design / artwork / sound
+        - Implementation

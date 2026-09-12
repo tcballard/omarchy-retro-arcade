@@ -45,6 +45,10 @@ packaging/build-arch.sh
 
 The package builder requires a clean committed checkout and does not install anything.
 
+## Contribute
+
+PRs, issues and playtesting are encouraged. [Report a bug, suggest an improvement or pitch a game](https://github.com/tcballard/omarchy-retro-arcade/issues/new/choose), or read the [contribution guide](CONTRIBUTING.md) to get started.
+
 ## Source layout
 
 - `arcade/`: the Rust app, collection shelf and local Pinball transport.

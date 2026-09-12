@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a gameplay, installation, save, sound or display problem.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying Arcade. Please search existing issues first and report one problem per issue.
+        Fill in what you know; "unknown" is fine for technical details. Remove personal information from logs and attachments.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected game or area
+      options:
+        - Collection / shared interface
+        - Circuit Pinball
+        - Solitaire
+        - Scram
+        - Invaders
+        - Chess
+        - Stack
+        - Snake
+        - Bubble
+        - Blast
+        - Installation / updates
+        - Leaderboards / sharing
+        - Other / multiple games
+    validations:
+      required: true
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: What happened, and what did you expect?
+      description: Include any error message and whether progress or settings were affected.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we reproduce it?
+      description: Include the game mode, controls used and how often it happens. If it happened only once, describe what you were doing.
+      placeholder: |
+        1. Open Arcade and choose...
+        2. ...
+        3. The problem occurs when...
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Arcade version or build
+      description: Use `omarchy-retro-arcade --version`, or paste the download / Actions run link or source commit. Use "unknown" if unavailable.
+    validations:
+      required: true
+  - type: dropdown
+    id: installation
+    attributes:
+      label: How did you install Arcade?
+      options:
+        - Downloaded preview package
+        - Built an Arch package from source
+        - Running a source build
+        - Other / unknown
+  - type: textarea
+    id: environment
+    attributes:
+      label: System and display
+      description: Whatever you know helps, especially for installation, rendering or performance problems.
+      placeholder: |
+        Omarchy / Linux version:
+        Hardware and CPU architecture (x86_64 / ARM / unknown):
+        GPU:
+        Desktop session (Wayland / X11 / unknown):
+        Theme, display scale and window size:
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots, recording or relevant logs
+      description: Optional. Attach images here or paste the relevant terminal output. Mention the last working build or a workaround if known.
