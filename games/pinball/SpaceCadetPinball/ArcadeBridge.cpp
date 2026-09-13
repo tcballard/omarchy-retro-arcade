@@ -29,7 +29,7 @@ void Init(){
 }
 static void quit(){SDL_Event e{SDL_QUIT};winmain::event_handler(&e);}
 static void command(const std::string& line){
-    int a=0,b=0,c=0;
+    int a=0,b=0,c=0,physical=0;
     SDL_Event e{};
     if(line=="quit"){quit();return;}
     if(sscanf(line.c_str(),"resize %d %d",&a,&b)==2){
@@ -39,7 +39,39 @@ static void command(const std::string& line){
     if(line=="blur"){
         pb::loose_focus();winmain::pause(false);return;
     }
-    if(sscanf(line.c_str(),"key %d %d %d",&a,&b,&c)==3){
+    if(sscanf(line.c_str(),"modifiers %d",&a)==1){
+        SDL_SetModState(static_cast<SDL_Keymod>(a));
+        auto& io=ImGui::GetIO();
+        io.AddKeyEvent(ImGuiMod_Ctrl,(a&KMOD_CTRL)!=0);
+        io.AddKeyEvent(ImGuiMod_Shift,(a&KMOD_SHIFT)!=0);
+        io.AddKeyEvent(ImGuiMod_Alt,(a&KMOD_ALT)!=0);
+        return;
+    }
+    if(line.compare(0,5,"text ")==0){
+        const size_t length=line.size()-5;
+        if(length==0 || length>2048 || length%2)return;
+        auto hex=[](char ch)->int {
+            if(ch>='0'&&ch<='9')return ch-'0';
+            if(ch>='a'&&ch<='f')return ch-'a'+10;
+            return -1;
+        };
+        std::string text;
+        for(size_t i=5;i<line.size();i+=2){
+            int hi=hex(line[i]),lo=hex(line[i+1]);
+            if(hi<0||lo<0)return;
+            unsigned char ch=static_cast<unsigned char>(hi*16+lo);
+            if(ch<32||ch==127)return;
+            text.push_back(static_cast<char>(ch));
+        }
+        auto& io=ImGui::GetIO();
+        if(io.WantTextInput)io.AddInputCharactersUTF8(text.c_str());
+        return;
+    }
+    int fields=sscanf(line.c_str(),"key %d %d %d %d",&a,&b,&c,&physical);
+    if(fields>=3){
+        // Older hosts send three fields. New hosts preserve the physical key
+        // for ImGui shortcuts (Ctrl+Z must not become the A flipper alias).
+        if(fields==4&&ImGui::GetIO().WantCaptureKeyboard)a=physical;
         e.type=b?SDL_KEYDOWN:SDL_KEYUP;e.key.state=b?SDL_PRESSED:SDL_RELEASED;
         e.key.keysym.sym=a;e.key.keysym.scancode=SDL_GetScancodeFromKey(a);e.key.keysym.mod=c;
         SDL_SetModState(static_cast<SDL_Keymod>(c));

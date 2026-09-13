@@ -1,6 +1,7 @@
 use eframe::egui::{self, Key};
 use std::{
     collections::HashSet,
+    fmt::Write as _,
     io::{self, Read, Write},
     path::PathBuf,
     process::{Child, Command, Stdio},
@@ -237,6 +238,11 @@ fn keycode(key: Key) -> Option<i32> {
         Key::Escape => 27,
         Key::Enter => 13,
         Key::Tab => 9,
+        Key::Backspace => 8,
+        Key::Delete => 127,
+        Key::Home => 1073741898,
+        Key::End => 1073741901,
+        Key::Y => 121,
         Key::ArrowLeft => 1073741904,
         Key::ArrowRight => 1073741903,
         Key::ArrowUp => 1073741906,
@@ -252,6 +258,27 @@ fn keycode(key: Key) -> Option<i32> {
         Key::F8 => 1073741889,
         _ => return None,
     })
+}
+// Text is distinct from gameplay key presses. Hex keeps UTF-8, spaces and
+// punctuation intact without allowing pasted newlines to become bridge commands.
+fn text_command(text: &str) -> Option<String> {
+    let text: String = text.chars().filter(|c| !c.is_control()).take(256).collect();
+    if text.is_empty() {
+        return None;
+    }
+    let mut command = String::from("text ");
+    for byte in text.bytes() {
+        write!(command, "{byte:02x}").expect("writing to a string");
+    }
+    Some(command)
+}
+// Keep text-editing shortcuts distinct from the classic flipper aliases.
+fn physical_keycode(key: Key) -> Option<i32> {
+    match key {
+        Key::Z => Some(122),
+        Key::Slash => Some(47),
+        _ => keycode(key),
+    }
 }
 // Multiple physical keys may hold the same logical control. Only emit edges.
 fn key_transition(held: &mut HashSet<Key>, key: Key, pressed: bool) -> Option<i32> {
@@ -330,8 +357,22 @@ impl eframe::App for Pinball {
                 }
                 // Ownership matters: coordinates alone include overlapping host dialogs.
                 let hovered = image.contains_pointer();
+                // Modifier keys have no egui Key event of their own. In particular,
+                // release Ctrl after Select All even when the next letter isn't a game key.
+                let mods = ctx.input(|i| i.modifiers);
+                self.send(format!(
+                    "modifiers {}",
+                    if mods.ctrl { 0x40 } else { 0 }
+                        | if mods.shift { 1 } else { 0 }
+                        | if mods.alt { 0x100 } else { 0 }
+                ));
                 for event in ctx.input(|i| i.events.clone()) {
                     match event {
+                        egui::Event::Text(text) | egui::Event::Paste(text) => {
+                            if let Some(command) = text_command(&text) {
+                                self.send(command);
+                            }
+                        }
                         egui::Event::Key {
                             key,
                             pressed,
@@ -343,7 +384,11 @@ impl eframe::App for Pinball {
                                 let mods = if modifiers.ctrl { 0x40 } else { 0 }
                                     | if modifiers.shift { 1 } else { 0 }
                                     | if modifiers.alt { 0x100 } else { 0 };
-                                self.send(format!("key {code} {} {mods}", i32::from(pressed)));
+                                let physical = physical_keycode(key).expect("mapped key");
+                                self.send(format!(
+                                    "key {code} {} {mods} {physical}",
+                                    i32::from(pressed)
+                                ));
                             }
                         }
                         egui::Event::PointerMoved(pos) if hovered => {
@@ -388,6 +433,22 @@ impl eframe::App for Pinball {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn names_preserve_utf8_and_cannot_inject_bridge_commands() {
+        assert_eq!(
+            text_command("Riél O'Neil"),
+            Some("text 5269c3a96c204f274e65696c".into())
+        );
+        assert_eq!(text_command("A\nquit\0"), Some("text 4171756974".into()));
+        assert_eq!(text_command("\n\0"), None);
+        assert_eq!(
+            text_command(&"é".repeat(300)).unwrap(),
+            format!("text {}", "c3a9".repeat(256))
+        );
+        assert_eq!(physical_keycode(Key::Z), Some(122));
+        assert_eq!(keycode(Key::Z), Some(97));
+        assert_eq!(physical_keycode(Key::Slash), Some(47));
+    }
     #[test]
     fn worker_shutdown_is_bounded() {
         for scenario in ["full", "blocked-write", "exited"] {

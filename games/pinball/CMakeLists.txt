@@ -282,6 +282,14 @@ if(BUILD_TESTING)
     add_test(NAME original-table COMMAND pinball-tests)
 endif()
 if(BUILD_TESTING)
+    add_executable(high-score-tests tests/high_score_test.cpp
+        SpaceCadetPinball/high_score.cpp SpaceCadetPinball/imgui.cpp
+        SpaceCadetPinball/imgui_draw.cpp SpaceCadetPinball/imgui_tables.cpp
+        SpaceCadetPinball/imgui_widgets.cpp)
+    target_include_directories(high-score-tests PRIVATE SpaceCadetPinball)
+    add_test(NAME high-score-dialog COMMAND high-score-tests)
+endif()
+if(BUILD_TESTING)
     add_test(NAME theme-path COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/tests/theme_path_test.py" $<TARGET_FILE:theme-tests>)
 endif()
 

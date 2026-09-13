@@ -135,3 +135,14 @@ design references, test evidence and architecture documents remain in source.
 Publish debug symbols separately and install only the player package in Arch CI.
 Check the extracted payload against the allowlist and report component sizes.
 This changes packaging only, not artwork, gameplay, save paths or recovery policy.
+
+### Circuit score-name editing
+
+Forward committed egui text and paste separately from gameplay keys, using bounded
+hex-encoded UTF-8 so whitespace cannot inject line-oriented bridge commands.
+Synchronize standalone modifier changes, and retain physical keys for text-editing
+shortcuts without changing the classic flipper aliases. Only deliver text when
+ImGui requests it. Existing score rows edit a temporary name buffer; OK or Enter
+commits names and the existing verification checksum immediately, while Cancel
+discards changes. Preserve scores, ordering, save paths and the 31-byte name format.
+Cover the real ImGui dialog and native host typing/save/restart in regression tests.

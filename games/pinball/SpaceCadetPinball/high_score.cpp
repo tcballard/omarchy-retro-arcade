@@ -9,6 +9,7 @@
 bool high_score::dlg_enter_name;
 bool high_score::ShowDialog = false;
 high_score_entry high_score::DlgData;
+high_score_struct high_score::EditData[5];
 std::vector<high_score_entry> high_score::ScoreQueue;
 high_score_struct high_score::highscore_table[5];
 
@@ -25,7 +26,8 @@ int high_score::read()
 		snprintf(Buffer, sizeof Buffer, "%d", position);
 		strcat(Buffer, ".Name");
 		auto name = options::GetSetting(Buffer, "");
-		strncpy(tablePtr.Name, name.c_str(), sizeof tablePtr.Name);
+		strncpy(tablePtr.Name, name.c_str(), sizeof tablePtr.Name - 1);
+		tablePtr.Name[sizeof tablePtr.Name - 1] = 0;
 
 		snprintf(Buffer, sizeof Buffer, "%d", position);
 		strcat(Buffer, ".Score");
@@ -142,6 +144,8 @@ void high_score::RenderHighScoreDialog()
 			}
 
 			ImGui::OpenPopup(pb::get_rc_string(Msg::HIGHSCORES_Caption));
+			for (int row = 0; row < 5; ++row)
+				EditData[row] = highscore_table[row];
 		}
 	}
 
@@ -170,7 +174,7 @@ void high_score::RenderHighScoreDialog()
 				{
 					offset = -1;
 					score = DlgData.Entry.Score;
-					ImGui::PushItemWidth(200);
+					ImGui::SetNextItemWidth(200);
 
 					if (ImGui::IsWindowAppearing())
 					{
@@ -181,6 +185,16 @@ void high_score::RenderHighScoreDialog()
 					{
 						textBoxSubmit = true;
 					}
+				}
+				else if (!dlg_enter_name && score > 0)
+				{
+					ImGui::PushID(row);
+					ImGui::SetNextItemWidth(200);
+					if (row == 0 && ImGui::IsWindowAppearing())
+						ImGui::SetKeyboardFocusHere();
+					textBoxSubmit |= ImGui::InputText("##name", EditData[row].Name,
+						IM_ARRAYSIZE(EditData[row].Name), ImGuiInputTextFlags_EnterReturnsTrue);
+					ImGui::PopID();
 				}
 				else
 				{
@@ -194,12 +208,23 @@ void high_score::RenderHighScoreDialog()
 			ImGui::EndTable();
 		}
 
+		if (!dlg_enter_name)
+			ImGui::TextDisabled("Edit names, then choose OK to save.");
+
 		if (ImGui::Button(pb::get_rc_string(Msg::GenericOk)) || textBoxSubmit)
 		{
 			if (dlg_enter_name)
 			{
 				place_new_score_into(DlgData);
 			}
+			else
+			{
+				for (int row = 0; row < 5; ++row)
+					if (highscore_table[row].Score > 0)
+						memcpy(highscore_table[row].Name, EditData[row].Name, sizeof EditData[row].Name);
+			}
+			write();
+			ImGui::SaveIniSettingsToDisk(ImGui::GetIO().IniFilename);
 			ImGui::CloseCurrentPopup();
 		}
 
@@ -216,6 +241,10 @@ void high_score::RenderHighScoreDialog()
 			if (ImGui::Button(pb::get_rc_string(Msg::GenericOk), ImVec2(120, 0)))
 			{
 				clear_table();
+				for (int row = 0; row < 5; ++row)
+					EditData[row] = highscore_table[row];
+				write();
+				ImGui::SaveIniSettingsToDisk(ImGui::GetIO().IniFilename);
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::SetItemDefaultFocus();
