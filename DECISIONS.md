@@ -125,3 +125,13 @@ until reopening successfully loads or archives both. Ordinary write errors remai
 retryable. Repairing files does not silently enable writes in an already-open
 fallback game. Preserve existing paths and schemas; test restart, persistence and
 exit through real app methods without a native display.
+
+### Player package contents
+
+Keep the pinned Stockfish engine/network bundled for offline computer Chess.
+Install only the explicit player-files.tsv payload plus Stockfish and its licence.
+Retain player help, component licences and textual asset provenance; screenshots,
+design references, test evidence and architecture documents remain in source.
+Publish debug symbols separately and install only the player package in Arch CI.
+Check the extracted payload against the allowlist and report component sizes.
+This changes packaging only, not artwork, gameplay, save paths or recovery policy.

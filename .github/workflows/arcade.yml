@@ -85,20 +85,34 @@ jobs:
           su builder -c "cd '$GITHUB_WORKSPACE' && packaging/build-arch.sh"
       - name: Install and verify
         run: |
-          pacman -U --noconfirm dist/arch/*.pkg.tar.zst
+          pacman -U --noconfirm dist/arch/omarchy-retro-arcade-[0-9]*.pkg.tar.zst
+          package_root="$(mktemp -d)"
+          bsdtar -xf dist/arch/omarchy-retro-arcade-[0-9]*.pkg.tar.zst -C "$package_root"
+          python3 packaging/check-player-package.py "$package_root"
+          rm -rf -- "$package_root"
+          if pacman -Q omarchy-retro-arcade-debug; then exit 1; fi
+          printf 'uci\nisready\nquit\n' | timeout 15s /usr/libexec/omarchy-retro-arcade/stockfish | tee /tmp/stockfish-uci.txt
+          grep -q '^uciok' /tmp/stockfish-uci.txt
+          grep -q '^readyok' /tmp/stockfish-uci.txt
           omarchy-retro-arcade --version
           test "$(pacman -Ql omarchy-retro-arcade | grep -c '/usr/share/applications/.*\.desktop$')" = 1
           su builder -c "cd '$GITHUB_WORKSPACE' && xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-check.py /usr/bin/omarchy-retro-arcade"
           su builder -c "cd '$GITHUB_WORKSPACE' && xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-blast.py /usr/bin/omarchy-retro-arcade"
           su builder -c 'xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 XDG_STATE_HOME=/tmp/arcade-upgrade omarchy-retro-arcade --game solitaire --screenshot /tmp/arcade-before.png'
           cp /tmp/arcade-upgrade/omarchy-solitaire/session.json /tmp/arcade-original.json
-          pacman -U --noconfirm dist/arch/*.pkg.tar.zst
+          pacman -U --noconfirm dist/arch/omarchy-retro-arcade-[0-9]*.pkg.tar.zst
           cmp /tmp/arcade-original.json /tmp/arcade-upgrade/omarchy-solitaire/session.json
           su builder -c 'xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 XDG_STATE_HOME=/tmp/arcade-upgrade omarchy-retro-arcade --game solitaire --screenshot /tmp/arcade-after.png'
       - uses: actions/upload-artifact@v4
         with:
           name: arch-package
-          path: dist/arch/*.pkg.tar.zst
+          path: dist/arch/omarchy-retro-arcade-[0-9]*.pkg.tar.zst
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch-debug-symbols
+          path: dist/arch/omarchy-retro-arcade-debug-*.pkg.tar.zst
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: corresponding-source-and-engine

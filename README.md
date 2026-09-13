@@ -1,6 +1,6 @@
 # Omarchy Arcade
 
-**Ten games. One native app. One more go.**
+**Eleven games. One native app. One more go.**
 
 A collection of classic games for Omarchy. Play pinball, cards, puzzles and arcade games in one native window, with offline play, local saves and an interface that follows your desktop theme.
 
@@ -22,7 +22,7 @@ contains nine games and does **not** include 2048 or Shatter.
 3. Install the package:
 
 ```sh
-sudo pacman -U ./omarchy-retro-arcade-*.pkg.tar.zst
+sudo pacman -U ./omarchy-retro-arcade-[0-9]*.pkg.tar.zst
 ```
 
 Open **Omarchy Arcade** from your app launcher. Click a game and **Play**, or double-click its title. You can also select with the arrow keys and press `Enter`. Click **Arcade** (or press `Ctrl+H`) to return; **Full screen** and `F11` toggle fullscreen, and `Ctrl+Q` quits. See the [mouse controls and per-game input guide](docs/MOUSE-SUPPORT.md).
@@ -30,6 +30,12 @@ Open **Omarchy Arcade** from your app launcher. Click a game and **Play**, or do
 The package includes all nine games and a bundled Stockfish engine for Chess. It replaces conflicting standalone game packages while retaining their existing save files and settings. The app works offline and needs no account.
 
 This is a tested development build from 12 September 2026, not a stable release or an official Omarchy package. The download supports **x86_64**; an ARM package is not available yet. GitHub's artifact expires on 11 December 2026. After that, use a newer successful build from [Actions](https://github.com/tcballard/omarchy-retro-arcade/actions/workflows/arcade.yml) or [build from source](#build).
+
+New builds provide separate `arch-package` (players), `arch-debug-symbols`
+(developers) and `corresponding-source-and-engine` downloads. Install only the
+player package; Stockfish is included for offline computer Chess. The older
+preview ZIP may contain both packages: the command above excludes debug symbols.
+See [player package contents](packaging/PLAYER.md).
 
 ## Build
 
