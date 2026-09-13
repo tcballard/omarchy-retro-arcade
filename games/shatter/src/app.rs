@@ -446,9 +446,11 @@ impl App {
             .min_width(340.)
             .max_width(420.)
             .max_height((ctx.screen_rect().height() - 140.).max(220.))
-            .vscroll(true)
             .default_width(350.);
         window.show(ctx, |ui| {
+            egui::ScrollArea::vertical()
+                .max_height((ctx.screen_rect().height() - 180.).max(180.))
+                .show(ui, |ui| {
             match self.panel {
                 Panel::Settings => {
                     ui.checkbox(&mut self.save.sound, "Sound · Ctrl+M");
@@ -505,6 +507,7 @@ impl App {
                 }
                 _ => self.run_menu(ui),
             }
+                });
         });
     }
     fn run_menu(&mut self, ui: &mut egui::Ui) {
