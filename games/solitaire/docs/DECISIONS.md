@@ -87,3 +87,9 @@ Normalize glyph bearings and derive suit placement from visible rank width, with
 are 32 × 28 units, within the tableau exposure. The pip field spans y=190–510,
 with symmetric side columns at x=155/345 and larger low-rank pips; nine and ten
 use a denser four-row layout. The lower index is still an exact 180-degree copy.
+
+## Arcade save-before-leave
+
+Expose a fallible final save to the Arcade host. Stop automatic completion and
+clear selection before saving. A rejected original remains protected. The host
+retains the app on failure and skips a second exit write after save or discard.

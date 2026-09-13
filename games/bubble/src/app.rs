@@ -49,6 +49,14 @@ impl Default for BubbleApp {
     }
 }
 impl BubbleApp {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.finished = false;
+        self.suspend();
+        if self.readonly {
+            return Err("The original Bubble save needs recovery before saving is allowed.".into());
+        }
+        storage::save(&self.path, &self.progress).map_err(|e| e.to_string())
+    }
     pub fn new() -> Self {
         Self::with_path(storage::state_path())
     }

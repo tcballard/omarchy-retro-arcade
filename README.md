@@ -88,7 +88,7 @@ PRs, issues and playtesting are encouraged. [Report a bug, suggest an improvemen
 
 Nine Rust games draw directly into the shared window. Pinball retains the upstream C++ physics engine in a private worker whose rendering appears in that same window, including on Wayland. No browser, X11 child-window embedding or separate game launcher is used.
 
-Existing save paths remain authoritative. Pinball preserves high scores and settings, but does not resume unfinished tables. The other games save when returning to Arcade.
+Existing save paths remain authoritative. Pinball preserves high scores and settings, but does not resume unfinished tables. The other games save before returning to Arcade or closing. If saving fails, the game stays open with Retry save, Stay and Leave anyway actions.
 
 Bubble adds 20 authored bubble-shooting puzzles, saved level progress and personal bests. [Controls, verified routes and native screenshots](games/bubble/README.md).
 

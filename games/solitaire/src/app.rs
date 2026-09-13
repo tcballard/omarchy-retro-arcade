@@ -88,6 +88,21 @@ pub struct SolitaireApp {
     capture_start: Option<f64>,
 }
 impl SolitaireApp {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.selection = None;
+        self.completing = false;
+        if !self.writable {
+            return Err(
+                "The original Solitaire save needs recovery before saving is allowed.".into(),
+            );
+        }
+        self.persist();
+        if self.save_error.is_empty() {
+            Ok(())
+        } else {
+            Err(self.save_error.clone())
+        }
+    }
     pub fn new(ctx: &Context, dir: PathBuf, screenshot: Option<PathBuf>) -> Self {
         let loaded = storage::load(&dir);
         let session = loaded.session;

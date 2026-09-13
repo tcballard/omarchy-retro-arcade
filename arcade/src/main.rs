@@ -100,6 +100,8 @@ impl Game {
     }
 }
 trait ArcadeGame: eframe::App {
+    fn prepare_to_leave(&mut self) -> Result<(), String>;
+
     fn ready(&self) -> bool {
         true
     }
@@ -110,6 +112,10 @@ trait ArcadeGame: eframe::App {
     }
 }
 impl ArcadeGame for omarchy_stack::app::StackApp {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_stack::app::StackApp::prepare_to_leave(self)
+    }
+
     fn suspend(&mut self) {
         self.suspend();
     }
@@ -118,6 +124,10 @@ impl ArcadeGame for omarchy_stack::app::StackApp {
     }
 }
 impl ArcadeGame for omarchy_bubble::app::BubbleApp {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_bubble::app::BubbleApp::prepare_to_leave(self)
+    }
+
     fn suspend(&mut self) {
         self.suspend();
     }
@@ -126,6 +136,10 @@ impl ArcadeGame for omarchy_bubble::app::BubbleApp {
     }
 }
 impl ArcadeGame for omarchy_blast::app::App {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_blast::app::App::prepare_to_leave(self)
+    }
+
     fn suspend(&mut self) {
         self.suspend();
     }
@@ -134,6 +148,10 @@ impl ArcadeGame for omarchy_blast::app::App {
     }
 }
 impl ArcadeGame for omarchy_shatter::app::App {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_shatter::app::App::prepare_to_leave(self)
+    }
+
     fn suspend(&mut self) {
         self.suspend();
     }
@@ -144,12 +162,38 @@ impl ArcadeGame for omarchy_shatter::app::App {
         omarchy_shatter::app::App::finished(self)
     }
 }
-impl ArcadeGame for omarchy_2048::app::App {}
-impl ArcadeGame for omarchy_chess::ui::ChessApp {}
-impl ArcadeGame for omarchy_solitaire::app::SolitaireApp {}
-impl ArcadeGame for omarchy_scram::app::ScramApp {}
-impl ArcadeGame for omarchy_invaders::App {}
+impl ArcadeGame for omarchy_2048::app::App {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_2048::app::App::prepare_to_leave(self)
+    }
+}
+impl ArcadeGame for omarchy_chess::ui::ChessApp {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_chess::ui::ChessApp::prepare_to_leave(self)
+    }
+}
+impl ArcadeGame for omarchy_solitaire::app::SolitaireApp {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_solitaire::app::SolitaireApp::prepare_to_leave(self)
+    }
+}
+impl ArcadeGame for omarchy_scram::app::ScramApp {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_scram::app::ScramApp::prepare_to_leave(self)
+    }
+}
+impl ArcadeGame for omarchy_invaders::App {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_invaders::App::prepare_to_leave(self)
+    }
+}
 impl ArcadeGame for pinball::Pinball {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        // The worker owns high-score/settings writes; its protocol has no save ACK.
+        self.pause();
+        Ok(())
+    }
+
     fn set_input_enabled(&mut self, enabled: bool) {
         self.set_input_enabled(enabled);
     }
@@ -164,6 +208,10 @@ impl ArcadeGame for pinball::Pinball {
     }
 }
 impl ArcadeGame for omarchy_snake::app::SnakeApp {
+    fn prepare_to_leave(&mut self) -> Result<(), String> {
+        omarchy_snake::app::SnakeApp::prepare_to_leave(self)
+    }
+
     fn finished(&mut self) -> bool {
         omarchy_snake::app::SnakeApp::finished(self)
     }
@@ -171,14 +219,26 @@ impl ArcadeGame for omarchy_snake::app::SnakeApp {
         omarchy_snake::app::SnakeApp::suspend(self);
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LeaveTarget {
+    Shelf,
+    Quit,
+}
+struct LeaveRequest {
+    target: LeaveTarget,
+    error: Option<String>,
+}
 struct Active {
     game: Game,
     app: Box<dyn ArcadeGame>,
     _lock: Option<Box<dyn std::any::Any>>,
+    leave_handled: bool,
 }
 impl Drop for Active {
     fn drop(&mut self) {
-        self.app.on_exit(None);
+        if !self.leave_handled {
+            self.app.on_exit(None);
+        }
     }
 }
 struct Arcade {
@@ -186,7 +246,8 @@ struct Arcade {
     selected: usize,
     error: Option<String>,
     about: bool,
-    confirm_home: bool,
+    pending_leave: Option<LeaveRequest>,
+    closing: bool,
     theme: omarchy_chess::theme::Theme,
     themed: Instant,
     capture: Option<PathBuf>,
@@ -236,6 +297,7 @@ impl Arcade {
                 game,
                 app,
                 _lock: lock,
+                leave_handled: false,
             })
         })();
         match result {
@@ -252,9 +314,97 @@ impl Arcade {
             Err(e) => self.error = Some(e),
         }
     }
+    fn request_leave(&mut self, target: LeaveTarget, ctx: &egui::Context) {
+        if self.pending_leave.is_some() || self.closing {
+            return;
+        }
+        if target == LeaveTarget::Shelf
+            && self
+                .active
+                .as_ref()
+                .is_some_and(|a| a.game == Game::Pinball)
+        {
+            self.active.as_mut().unwrap().app.suspend();
+            self.pending_leave = Some(LeaveRequest {
+                target,
+                error: None,
+            });
+        } else {
+            self.attempt_leave(target, ctx);
+        }
+    }
+    fn attempt_leave(&mut self, target: LeaveTarget, ctx: &egui::Context) {
+        let result = self
+            .active
+            .as_mut()
+            .map_or(Ok(()), |a| a.app.prepare_to_leave());
+        match result {
+            Ok(()) => self.complete_leave(target, ctx),
+            Err(error) => {
+                self.pending_leave = Some(LeaveRequest {
+                    target,
+                    error: Some(error),
+                })
+            }
+        }
+    }
+    fn complete_leave(&mut self, target: LeaveTarget, ctx: &egui::Context) {
+        // A successful save or explicit discard is final: Drop must not write again.
+        if let Some(active) = &mut self.active {
+            active.leave_handled = true;
+        }
+        self.home(ctx);
+        if target == LeaveTarget::Quit {
+            self.closing = true;
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    }
+    fn leave_dialog(&mut self, ctx: &egui::Context) {
+        if let Some(request) = &self.pending_leave {
+            let target = request.target;
+            let error = request.error.clone();
+            let mut retry = false;
+            let mut discard = false;
+            let mut stay = ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::Escape));
+            egui::Modal::new(egui::Id::new("leave-game")).show(ctx, |ui| {
+                ui.set_max_width(460.);
+                if let Some(error) = &error {
+                    ui.heading("Could not save");
+                    ui.label(error);
+                    ui.label("Your game is still open. Fix the save problem and retry, or leave without saving the latest progress.");
+                    ui.horizontal(|ui| {
+                        retry = ui.button("Retry save").clicked();
+                        stay |= ui.button("Stay (Esc)").clicked();
+                        discard = ui.button("Leave anyway (Alt+L)").clicked();
+                    });
+                } else {
+                    ui.heading(if target == LeaveTarget::Quit { "Quit Arcade?" } else { "Return to Arcade?" });
+                    ui.label("This ends the current pinball game. Pinball keeps high scores and settings, but cannot resume the table.");
+                    ui.horizontal(|ui| {
+                        retry = ui.button("End game and return (Enter)").clicked();
+                        stay |= ui.button("Keep playing (Esc)").clicked();
+                    });
+                }
+            });
+            if error.is_some() {
+                discard |= ctx.input_mut(|i| i.consume_key(egui::Modifiers::ALT, Key::L));
+                retry |= ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::Enter));
+            }
+            if error.is_none() {
+                retry |= ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::Enter));
+            }
+            if discard {
+                self.complete_leave(target, ctx);
+            } else if retry {
+                self.attempt_leave(target, ctx);
+            } else if stay {
+                self.pending_leave = None;
+            }
+        }
+    }
     fn home(&mut self, ctx: &egui::Context) {
         self.active = None;
-        self.confirm_home = false;
+        self.pending_leave = None;
         ctx.memory_mut(|m| *m = egui::Memory::default());
         ctx.set_style(egui::Style::default());
         ctx.send_viewport_cmd(egui::ViewportCommand::Title("Omarchy Arcade".into()));
@@ -271,10 +421,13 @@ impl eframe::App for Arcade {
         let mut home = ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::CTRL, Key::H))
         });
-        if ctx.input_mut(|i| {
+        let quit = ctx.input_mut(|i| {
             i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::CTRL, Key::Q))
-        }) {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        });
+        let close_requested = ctx.input(|i| i.viewport().close_requested());
+        if !self.closing && (quit || close_requested) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            self.request_leave(LeaveTarget::Quit, ctx);
         }
         arcade_presentation::apply(ctx);
         if let Some(a) = self.active.as_ref() {
@@ -304,49 +457,29 @@ impl eframe::App for Arcade {
                 });
         }
         if home && self.active.is_some() {
+            self.request_leave(LeaveTarget::Shelf, ctx);
+        }
+        // Freeze Rust games for the entire modal frame, including Stay's click/key.
+        let block_game_input = self.pending_leave.is_some() || self.closing;
+        self.leave_dialog(ctx);
+        if let Some(a) = self.active.as_mut() {
+            a.app.set_input_enabled(!block_game_input);
+            if !block_game_input || a.game == Game::Pinball {
+                a.app.update(ctx, frame);
+            }
+        } else {
+            self.shelf(ctx);
+        }
+        if self.pending_leave.is_none() && self.active.as_mut().is_some_and(|a| a.app.finished()) {
             if self
                 .active
                 .as_ref()
                 .is_some_and(|a| a.game == Game::Pinball)
             {
-                self.confirm_home = true;
-                if let Some(a) = self.active.as_mut() {
-                    a.app.suspend();
-                }
+                self.complete_leave(LeaveTarget::Shelf, ctx);
             } else {
-                self.home(ctx);
+                self.request_leave(LeaveTarget::Shelf, ctx);
             }
-        }
-        let block_game_input = self.confirm_home;
-        if self.confirm_home {
-            let mut leave = ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::Enter));
-            let mut cancel = ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::Escape));
-            egui::Modal::new(egui::Id::new("return-to-arcade")).show(ctx, |ui| {
-                ui.set_max_width(430.);
-                ui.heading("Return to Arcade?");
-                ui.label(
-                    "This ends the current pinball game. Saved high scores and settings are kept.",
-                );
-                ui.horizontal(|ui| {
-                    leave |= ui.button("End game and return (Enter)").clicked();
-                    cancel |= ui.button("Keep playing (Esc)").clicked();
-                });
-            });
-            if leave {
-                self.home(ctx);
-            } else if cancel {
-                self.confirm_home = false;
-            }
-        }
-        if let Some(a) = self.active.as_mut() {
-            // Keep the worker rendering, but suppress input through the closing frame too.
-            a.app.set_input_enabled(!block_game_input);
-            a.app.update(ctx, frame);
-        } else {
-            self.shelf(ctx);
-        }
-        if self.active.as_mut().is_some_and(|a| a.app.finished()) {
-            self.home(ctx);
         }
         if let Some(error) = self.error.clone() {
             egui::Window::new("Could not open game").show(ctx, |ui| {
@@ -477,7 +610,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 selected: 0,
                 error: None,
                 about: false,
-                confirm_home: false,
+                pending_leave: None,
+                closing: false,
                 theme: omarchy_chess::theme::Theme::load(),
                 themed: Instant::now(),
                 capture,
@@ -488,4 +622,166 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod leave_tests {
+    use super::*;
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    struct FakeGame {
+        fail: Rc<Cell<bool>>,
+        writes: Rc<Cell<usize>>,
+        exits: Rc<Cell<usize>>,
+    }
+    impl eframe::App for FakeGame {
+        fn update(&mut self, _: &egui::Context, _: &mut eframe::Frame) {}
+        fn on_exit(&mut self, _: Option<&eframe::glow::Context>) {
+            self.exits.set(self.exits.get() + 1);
+        }
+    }
+    impl ArcadeGame for FakeGame {
+        fn prepare_to_leave(&mut self) -> Result<(), String> {
+            self.writes.set(self.writes.get() + 1);
+            if self.fail.get() {
+                Err("Disk full".into())
+            } else {
+                Ok(())
+            }
+        }
+    }
+    fn host(app: Box<dyn ArcadeGame>) -> Arcade {
+        Arcade {
+            active: Some(Active {
+                game: Game::Shatter,
+                app,
+                _lock: None,
+                leave_handled: false,
+            }),
+            selected: 0,
+            error: None,
+            about: false,
+            pending_leave: None,
+            closing: false,
+            theme: omarchy_chess::theme::Theme::default(),
+            themed: Instant::now(),
+            capture: None,
+            frames: 0,
+            initial: None,
+            _lock: tempfile::tempfile().unwrap(),
+        }
+    }
+    fn frame(host: &mut Arcade, ctx: &egui::Context, events: Vec<egui::Event>) -> egui::FullOutput {
+        ctx.run(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(900., 760.),
+                )),
+                focused: true,
+                events,
+                ..Default::default()
+            },
+            |ctx| host.leave_dialog(ctx),
+        )
+    }
+    fn click(host: &mut Arcade, ctx: &egui::Context, label: &str) {
+        frame(host, ctx, vec![]);
+        let out = frame(host, ctx, vec![]);
+        let pos = out
+            .shapes
+            .iter()
+            .find_map(|s| match &s.shape {
+                egui::Shape::Text(t) if t.galley.job.text == label => {
+                    Some(t.pos + t.galley.size() / 2.)
+                }
+                _ => None,
+            })
+            .unwrap_or_else(|| panic!("Missing action: {label}"));
+        for pressed in [true, false] {
+            frame(
+                host,
+                ctx,
+                vec![
+                    egui::Event::PointerMoved(pos),
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            );
+        }
+    }
+    #[test]
+    fn failed_leave_stay_retry_and_discard_use_real_dialog_actions() {
+        for target in [LeaveTarget::Shelf, LeaveTarget::Quit] {
+            let fail = Rc::new(Cell::new(true));
+            let writes = Rc::new(Cell::new(0));
+            let exits = Rc::new(Cell::new(0));
+            let mut arcade = host(Box::new(FakeGame {
+                fail: fail.clone(),
+                writes: writes.clone(),
+                exits: exits.clone(),
+            }));
+            let ctx = egui::Context::default();
+            arcade.request_leave(target, &ctx);
+            assert!(arcade.active.is_some());
+            assert_eq!(
+                arcade.pending_leave.as_ref().unwrap().error.as_deref(),
+                Some("Disk full")
+            );
+            arcade.request_leave(LeaveTarget::Quit, &ctx);
+            assert_eq!(writes.get(), 1, "Repeated requests must not retry silently");
+            click(&mut arcade, &ctx, "Stay (Esc)");
+            assert!(arcade.active.is_some());
+            assert!(arcade.pending_leave.is_none());
+            arcade.request_leave(target, &ctx);
+            click(&mut arcade, &ctx, "Retry save");
+            assert!(arcade.active.is_some());
+            fail.set(false);
+            click(&mut arcade, &ctx, "Retry save");
+            assert!(arcade.active.is_none());
+            assert_eq!(arcade.closing, target == LeaveTarget::Quit);
+            assert_eq!(exits.get(), 0, "Drop must not repeat a completed save");
+
+            fail.set(true);
+            let mut arcade = host(Box::new(FakeGame {
+                fail,
+                writes: writes.clone(),
+                exits: exits.clone(),
+            }));
+            arcade.request_leave(target, &ctx);
+            let before = writes.get();
+            click(&mut arcade, &ctx, "Leave anyway (Alt+L)");
+            assert!(arcade.active.is_none());
+            assert_eq!(
+                writes.get(),
+                before,
+                "Explicit discard must not write again"
+            );
+            assert_eq!(exits.get(), 0);
+        }
+    }
+    #[test]
+    fn real_chess_write_failure_keeps_app_until_retry_succeeds() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = omarchy_chess::ui::ChessApp::new(dir.path().to_owned());
+        let file = dir.path().join("session.json");
+        std::fs::create_dir(&file).unwrap();
+        let neighbour = dir.path().join("other-game.json");
+        std::fs::write(&neighbour, b"preserve").unwrap();
+        let mut arcade = host(Box::new(app));
+        let ctx = egui::Context::default();
+        arcade.request_leave(LeaveTarget::Shelf, &ctx);
+        assert!(arcade.pending_leave.as_ref().unwrap().error.is_some());
+        assert!(arcade.active.is_some());
+        std::fs::remove_dir(&file).unwrap();
+        arcade.attempt_leave(LeaveTarget::Shelf, &ctx);
+        assert!(arcade.active.is_none());
+        assert!(omarchy_chess::storage::load(dir.path()).is_ok());
+        assert_eq!(std::fs::read(neighbour).unwrap(), b"preserve");
+    }
 }

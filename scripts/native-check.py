@@ -73,6 +73,13 @@ def click(px,py):
     xt.XTestFakeButtonEvent(display,1,1,0);x.XFlush(display);time.sleep(.06)
     xt.XTestFakeButtonEvent(display,1,0,0);x.XFlush(display);time.sleep(.2)
 
+def leave_anyway():
+    # Explicitly acknowledge unsaved progress in the host's leave dialog.
+    alt=x.XKeysymToKeycode(display,0xffe9)
+    xt.XTestFakeKeyEvent(display,alt,1,0)
+    key(ord('l'))
+    xt.XTestFakeKeyEvent(display,alt,0,0);x.XFlush(display);time.sleep(.2)
+
 with tempfile.TemporaryDirectory(prefix='arcade-native-') as tmp:
     state=Path(tmp)/'state'
     env=dict(os.environ,XDG_STATE_HOME=str(state),XDG_CONFIG_HOME=tmp+'/config',XDG_DATA_HOME=tmp+'/data')

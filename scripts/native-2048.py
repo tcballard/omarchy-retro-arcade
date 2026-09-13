@@ -49,7 +49,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-2048-') as tmp:
         key(ord('q'),True);app.wait(timeout=8);assert app.returncode==0
         # A future/corrupt save must not be silently replaced by a new run or close.
         save.write_text('future-save-do-not-replace')
-        app,w=launch();key(0xff51);capture('save-error');key(ord('q'),True);app.wait(timeout=8)
+        app,w=launch();key(0xff51);capture('save-error');key(ord('q'),True);leave_anyway();app.wait(timeout=8)
         assert save.read_text()=='future-save-do-not-replace'
         print('PASS: 2048 native keys, drag, undo, pause/help isolation, same-window switch, reopen and corrupt-save retention.')
     finally:

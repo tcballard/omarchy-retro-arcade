@@ -39,6 +39,17 @@ impl Default for SnakeApp {
     }
 }
 impl SnakeApp {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.finished = false;
+        if self.writable {
+            self.error = None;
+        }
+        self.suspend();
+        if !self.writable {
+            return Err("Snake could not preserve the original save. Reopen after recovery to enable saving.".into());
+        }
+        self.error.clone().map_or(Ok(()), Err)
+    }
     pub fn new() -> Self {
         Self::from_dir(storage::state_dir())
     }
@@ -747,6 +758,8 @@ mod save_protection_tests {
                 app.records.preferences.audio = true;
                 app.fresh(false);
                 app.persist();
+                assert!(app.prepare_to_leave().is_err());
+                assert!(app.error.is_some(), "Keep recovery instructions after Stay");
                 app.on_exit(None);
                 assert_eq!(std::fs::read(&path).unwrap(), original);
                 std::fs::remove_file(dir.path().join("archive")).unwrap();

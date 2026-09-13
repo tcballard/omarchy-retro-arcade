@@ -93,13 +93,15 @@ try:
                 key(ord("p"))
                 unchanged()
                 capture("paused")
-                key(ord("h"), True)  # Drop the active game and return to the shelf.
+                key(ord("h"), True)
+                leave_anyway()  # Explicitly leave the protected, unsaved session.
                 assert windows() == [window]
                 unchanged()
                 key(0xff0d)  # Reopen Stack; protection must apply again.
                 key(ord("s"))  # Start an unsaved Sprint run.
                 key(0x20)
                 key(ord("q"), True)
+                leave_anyway()
                 app.wait(timeout=10)
                 assert app.returncode == 0
                 unchanged()

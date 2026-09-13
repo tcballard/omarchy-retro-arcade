@@ -82,6 +82,16 @@ pub struct StackApp {
     flash: f32,
 }
 impl StackApp {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.finished = false;
+        // Clear only the previous write error; the rejected-load guard is separate.
+        self.error = None;
+        self.suspend();
+        if let Some(error) = &self.save_blocked {
+            return Err(error.clone());
+        }
+        self.error.clone().map_or(Ok(()), Err)
+    }
     pub fn new() -> Self {
         let dir = std::env::var_os("XDG_STATE_HOME")
             .map(PathBuf::from)

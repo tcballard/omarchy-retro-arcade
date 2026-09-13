@@ -46,6 +46,22 @@ pub struct ChessApp {
     settings_blocked: bool,
 }
 impl ChessApp {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.engine.cancel();
+        self.selected = None;
+        self.drag_source = None;
+        if self.save_blocked || self.settings_blocked {
+            return Err(
+                "The original Chess save or settings need recovery before saving is allowed."
+                    .into(),
+            );
+        }
+        storage::save(&self.state_dir, &self.game, self.flipped, self.guides)
+            .map_err(|e| e.to_string())?;
+        self.preferences
+            .save(&self.state_dir)
+            .map_err(|e| e.to_string())
+    }
     pub fn new(state_dir: PathBuf) -> Self {
         let mut app = Self {
             pieces: crate::pieces::Pieces::default(),
@@ -149,7 +165,6 @@ impl ChessApp {
         if !self.save_blocked {
             if let Err(e) = storage::save(&self.state_dir, &self.game, self.flipped, self.guides) {
                 self.message = format!("Could not save: {e}. Export PGN to keep a copy.");
-                self.save_blocked = true;
             }
         }
     }

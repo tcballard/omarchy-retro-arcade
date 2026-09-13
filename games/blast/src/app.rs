@@ -40,6 +40,16 @@ impl Default for App {
     }
 }
 impl App {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.leave = false;
+        self.suspend();
+        if !self.writable {
+            return Err("The original Blast save needs recovery before saving is allowed.".into());
+        }
+        self.settings
+            .save(&self.dir)
+            .map_err(|e| format!("Could not save Blast preferences: {e}"))
+    }
     pub fn new() -> Self {
         Self::from_dir(storage::state_dir())
     }
@@ -838,6 +848,7 @@ mod save_protection_tests {
             assert!(!app.writable);
             app.settings.sound = true;
             app.persist();
+            assert!(app.prepare_to_leave().is_err());
             app.on_exit(None);
             assert_eq!(std::fs::read(&path).unwrap(), original);
             std::fs::rename(&path, dir.path().join("preserved.json")).unwrap();

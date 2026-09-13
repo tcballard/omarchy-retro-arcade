@@ -6,8 +6,11 @@ computer Chess. All games are available offline. No account is needed.
 Open Omarchy Arcade from the app launcher. Select a game and click Play, or
 select with the arrow keys and press Enter. Each game's Help explains its rules
 and controls. Ctrl+H returns to the collection, F11 toggles fullscreen and Ctrl+Q
-quits. Save before leaving; Pinball keeps records/settings but not unfinished
-tables. Existing per-game save locations are retained through package upgrades.
+quits. Rust games save before leaving. If saving fails, Retry save (Enter)
+tries again, Stay (Escape) keeps the game open, and Leave anyway (Alt+L) discards
+unsaved session progress. Repair/recover rejected files before reopening to enable
+saving; Retry never overwrites a rejected original. Pinball keeps records/settings
+but not unfinished tables; its worker does not report save failures to this dialog. Existing per-game save locations are retained through package upgrades.
 
 ## Install
 

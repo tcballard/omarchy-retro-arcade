@@ -45,7 +45,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-shatter-') as tmp:
         app,w=launch();assert read()['campaign']==playing;capture('continued')
         key(ord('q'),True);app.wait(timeout=8)
         save.write_text('future-save-do-not-replace')
-        app,w=launch();key(0x20);key(ord('q'),True);app.wait(timeout=8)
+        app,w=launch();key(0x20);key(ord('q'),True);leave_anyway();app.wait(timeout=8)
         assert save.read_text()=='future-save-do-not-replace'
         print('PASS: Shatter launch/pause, held-input isolation, same-window shelf, exact reopen, corrupt-save protection.')
     finally:

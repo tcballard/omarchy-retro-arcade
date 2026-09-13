@@ -135,3 +135,20 @@ design references, test evidence and architecture documents remain in source.
 Publish debug symbols separately and install only the player package in Arch CI.
 Check the extracted payload against the allowlist and report component sizes.
 This changes packaging only, not artwork, gameplay, save paths or recovery policy.
+
+### Save before leaving Rust games
+
+The host asks each Rust game to pause/quiesce and report its final save result
+before returning to the shelf or accepting a window close, Ctrl+Q or in-game
+quit. A failure keeps the app and session lock alive with Retry, Stay and explicit
+Leave Anyway actions. Freeze game updates while the failure dialog is open,
+including its dismissal frame. Rejected saves remain write-blocked on retry.
+A completed save or explicit discard suppresses the legacy on_exit write;
+unexpected host teardown retains that last-resort path. This does not guarantee
+saving after forced process termination or power loss.
+
+Pinball retains its worker-owned high-score/settings persistence and end-table
+confirmation on returning to the shelf. Its existing protocol has no save ACK;
+this change does not claim to detect or retry Pinball persistence failures.
+Chess ordinary write errors remain retryable; rejected loads still require
+recovery. Existing paths, formats, game rules and artwork are unchanged.

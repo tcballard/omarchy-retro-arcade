@@ -37,6 +37,8 @@ jobs:
           path: /tmp/arcade-polish/
       - name: One window, eleven games, existing saves
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-check.py target/release/omarchy-retro-arcade
+      - name: Save-before-leave failure and retry
+        run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-save-before-leave.py target/release/omarchy-retro-arcade /tmp/arcade-renders/save-before-leave
       - name: Shatter controls, exact resume and save protection
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-shatter.py target/release/omarchy-retro-arcade /tmp/arcade-renders/shatter
       - name: Mouse navigation, pointer gameplay and layouts

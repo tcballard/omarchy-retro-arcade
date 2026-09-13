@@ -23,6 +23,15 @@ pub struct App {
     drag_origin: Option<Pos2>,
 }
 impl App {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.paused = true;
+        self.drag_origin = None;
+        if !self.writable {
+            return Err("The original 2048 save needs recovery before saving is allowed.".into());
+        }
+        self.flush();
+        self.error.clone().map_or(Ok(()), Err)
+    }
     pub fn new() -> Result<Self, String> {
         Self::open(storage::path()?)
     }

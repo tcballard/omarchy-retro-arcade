@@ -44,6 +44,14 @@ pub struct ScramApp {
     pack_message: String,
 }
 impl ScramApp {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.paused = true;
+        self.accumulator = 0.;
+        if !self.writable {
+            return Err("The original Scram save needs recovery before saving is allowed.".into());
+        }
+        self.save.write(&self.dir).map_err(|e| e.to_string())
+    }
     pub fn new(ctx: &egui::Context, dir: PathBuf, screenshot: Option<PathBuf>) -> Self {
         egui_extras::install_image_loaders(ctx);
         let loaded = storage::load(&dir);

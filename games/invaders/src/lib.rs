@@ -29,6 +29,17 @@ pub struct App {
     pointer_target: Option<f32>,
 }
 impl App {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.paused = true;
+        self.pointer_target = None;
+        self.acc = 0.;
+        if !self.save_ok {
+            return Err(
+                "The original Invaders save needs recovery before saving is allowed.".into(),
+            );
+        }
+        self.store.save(&self.s).map_err(|e| e.to_string())
+    }
     pub fn new(store: Store) -> Self {
         let (s, paused, error, save_ok) = match store.load() {
             Ok(Some(s)) => (s, true, None, true),

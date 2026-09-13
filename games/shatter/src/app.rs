@@ -102,6 +102,16 @@ impl Default for App {
     }
 }
 impl App {
+    pub fn prepare_to_leave(&mut self) -> Result<(), String> {
+        self.leave = false;
+        self.suspend();
+        if self.blocked {
+            return Err(
+                "The original Shatter save needs recovery before saving is allowed.".into(),
+            );
+        }
+        self.write_error.clone().map_or(Ok(()), Err)
+    }
     pub fn new() -> Self {
         Self::from_path(storage::path())
     }
@@ -1014,5 +1024,32 @@ mod tests {
         app.save.campaign.lives = 0;
         app.resume();
         assert!(app.panel == Panel::Pause);
+    }
+}
+
+#[cfg(test)]
+mod leave_save_tests {
+    use super::*;
+    #[test]
+    fn failed_write_retries_but_rejected_original_stays_protected() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("shatter.json");
+        let mut app = App::from_path(path.clone());
+        app.save.campaign.score = 123;
+        std::fs::create_dir(&path).unwrap();
+        app.leave = true;
+        assert!(app.prepare_to_leave().is_err());
+        assert!(!app.leave);
+        assert_eq!(app.save.campaign.score, 123);
+        std::fs::remove_dir(&path).unwrap();
+        assert!(app.prepare_to_leave().is_ok());
+        assert_eq!(storage::load(&path).unwrap().campaign.score, 123);
+        std::fs::write(&path, b"future-version-original").unwrap();
+        let mut app = App::from_path(path.clone());
+        assert!(app.prepare_to_leave().is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), b"future-version-original");
+        std::fs::rename(&path, dir.path().join("preserved.json")).unwrap();
+        assert!(app.prepare_to_leave().is_err());
+        assert!(!path.exists(), "Retry cannot unlock a rejected save");
     }
 }
