@@ -37,14 +37,14 @@ jobs:
           path: /tmp/arcade-polish/
       - name: One window, eleven games, existing saves
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-check.py target/release/omarchy-retro-arcade
+      - name: Shatter controls, exact resume and save protection
+        run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-shatter.py target/release/omarchy-retro-arcade /tmp/arcade-renders/shatter
       - name: Mouse navigation, pointer gameplay and layouts
         run: |
           xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 -B scripts/native-mouse.py target/release/omarchy-retro-arcade /tmp/arcade-renders/mouse/dark
           xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy ARCADE_TEST_COMPACT=1 python3 -B scripts/native-mouse.py target/release/omarchy-retro-arcade /tmp/arcade-renders/mouse/compact
           xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy ARCADE_TEST_LIGHT=1 python3 -B scripts/native-mouse.py target/release/omarchy-retro-arcade /tmp/arcade-renders/mouse/light
           xvfb-run -a -s '-screen 0 2400x1900x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy ARCADE_TEST_COMPACT=1 WINIT_X11_SCALE_FACTOR=2 python3 -B scripts/native-mouse.py target/release/omarchy-retro-arcade /tmp/arcade-renders/mouse/200
-      - name: Shatter controls, exact resume and save protection
-        run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-shatter.py target/release/omarchy-retro-arcade /tmp/arcade-renders/shatter
       - name: 2048 controls, saves and credits
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-2048.py target/release/omarchy-retro-arcade /tmp/arcade-renders/2048
       - name: Stack keyboard, pause, focus and saves

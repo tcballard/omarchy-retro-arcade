@@ -55,3 +55,28 @@ This is an implementation proposal for issue #7, not completed Omarchy acceptanc
   wall or brick. Check whether the initial visual separation feels clear enough.
 
 Do not close #7 until native/package results and hands-on acceptance are recorded.
+
+## First polish pass
+
+Reviewed the actual compact and light Shatter PNGs from PR #32 run 34748793332.
+That run passed Arch package/build/install verification, required-Stockfish Rust
+checks, C++ tests, all four render variants, and eleven-game switching. The native
+job then failed because `native-mouse.py` still calculated shelf positions for ten
+games. The harness now includes Shatter; its dedicated check runs first so other
+mouse failures cannot prevent Shatter evidence from being collected.
+
+Polish changes: clear Pause/Resume labels, READY during serve, visible capsule
+legend, named scrollable practice choices, stronger primary menu actions, light/
+dark overlay dimming, persistent focus/stall explanations, pickup/life-loss cues,
+and a retry action for failed saves. Completed runs cannot resume into gameplay;
+pausing reduces redraw frequency. No physics constants or save schema changed.
+
+New egui UI tests click the actual rendered action labels to verify next-level
+click isolation, campaign/practice isolation, restart cancellation, and failed
+save retry. Focus loss, catch-up pauses and terminal resume guards are tested.
+This is UI event evidence, not an OS-level or human desktop substitute.
+
+The existing extracted Xvfb executable was found locally, but sandbox policy
+blocks its listening sockets and rejects escalation. Refreshed native screenshots
+and OS input results therefore rely on the new CI run; no local native pass is
+claimed. Human paddle-feel and difficulty acceptance remain outstanding.

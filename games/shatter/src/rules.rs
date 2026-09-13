@@ -83,7 +83,7 @@ pub enum Event {
     Paddle,
     Damage(V),
     Destroy(V),
-    Pickup,
+    Pickup(Power),
     Lost,
     Clear,
     Redirect,
@@ -317,7 +317,7 @@ impl Run {
                 && (cap.p.x - self.paddle).abs() <= self.width() / 2. + 8.
             {
                 self.pickup(cap.kind);
-                events.push(Event::Pickup);
+                events.push(Event::Pickup(cap.kind));
             } else if cap.p.y < 608. {
                 self.capsules.push(cap);
             }

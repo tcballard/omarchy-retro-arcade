@@ -79,6 +79,8 @@ pub struct App {
     path: PathBuf,
     blocked: bool,
     error: Option<String>,
+    write_error: Option<String>,
+    pause_reason: Option<String>,
     panel: Panel,
     controls: Controls,
     clock: Clock,
@@ -101,7 +103,9 @@ impl Default for App {
 }
 impl App {
     pub fn new() -> Self {
-        let path = storage::path();
+        Self::from_path(storage::path())
+    }
+    fn from_path(path: PathBuf) -> Self {
         let exists = path.exists();
         let (save, error) = match storage::load(&path) {
             Ok(s) => (s, None),
@@ -114,6 +118,12 @@ impl App {
             path,
             blocked,
             error,
+            write_error: None,
+            pause_reason: if exists {
+                Some("Your campaign is saved. Resume when ready.".into())
+            } else {
+                None
+            },
             panel: if exists { Panel::Pause } else { Panel::Play },
             controls: Controls::default(),
             clock: Clock::default(),
@@ -139,9 +149,9 @@ impl App {
     fn persist(&mut self) {
         if !self.blocked {
             self.save.observe();
-            if let Err(e) = storage::write(&self.path, &self.save) {
-                self.error = Some(format!("Progress could not be saved: {e}"));
-            }
+            self.write_error = storage::write(&self.path, &self.save)
+                .err()
+                .map(|e| format!("Progress is not saved: {e}"));
         }
         self.checkpoint = Instant::now();
     }
@@ -167,6 +177,10 @@ impl App {
         self.panel = panel;
     }
     fn resume(&mut self) {
+        if self.blocked || !matches!(self.run().phase, Phase::Serve | Phase::Playing) {
+            return;
+        }
+        self.pause_reason = None;
         self.panel = Panel::Play;
         self.controls.clear();
         self.pending_launch = false;
@@ -334,7 +348,15 @@ impl App {
         p.text(
             pt(V::new(776., 22.)),
             Align2::RIGHT_CENTER,
-            format!("{} LIVES · {} BALLS", run.lives, run.balls.len()),
+            format!(
+                "{} LIVES · {}",
+                run.lives,
+                if run.phase == Phase::Serve {
+                    "READY".into()
+                } else {
+                    format!("{} BALLS", run.balls.len())
+                }
+            ),
             FontId::monospace(13. * scale),
             fg,
         );
@@ -354,7 +376,11 @@ impl App {
         p.text(
             pt(V::new(400., 580.)),
             Align2::CENTER_CENTER,
-            effects,
+            if effects.is_empty() {
+                "E  Expand     M  Multiball     L  Laser".into()
+            } else {
+                effects
+            },
             FontId::monospace(12. * scale),
             accent,
         );
@@ -362,9 +388,18 @@ impl App {
             p.text(
                 pt(V::new(400., 420.)),
                 Align2::CENTER_CENTER,
-                "MOVE: mouse / A D / ← →     LAUNCH: click / Space",
+                "Move: mouse / A D / ← →     Serve: click / Space",
                 FontId::monospace(14. * scale),
                 fg,
+            );
+        }
+        if self.practice.is_some() {
+            p.text(
+                pt(V::new(400., 40.)),
+                Align2::CENTER_CENTER,
+                "PRACTICE · campaign saved",
+                FontId::monospace(11. * scale),
+                accent,
             );
         }
         if let Some((cue, time)) = &self.cue {
@@ -377,6 +412,14 @@ impl App {
                     accent,
                 );
             }
+        }
+        if self.panel != Panel::Play {
+            let tint = if ui.visuals().dark_mode {
+                egui::Color32::from_black_alpha(40)
+            } else {
+                egui::Color32::from_white_alpha(45)
+            };
+            p.rect_filled(rect, 0., tint);
         }
     }
     fn overlay(&mut self, ctx: &egui::Context) {
@@ -400,6 +443,10 @@ impl App {
             .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
             .collapsible(false)
             .resizable(false)
+            .min_width(340.)
+            .max_width(420.)
+            .max_height((ctx.screen_rect().height() - 140.).max(220.))
+            .vscroll(true)
             .default_width(350.);
         window.show(ctx, |ui| {
             match self.panel {
@@ -419,17 +466,18 @@ impl App {
                     if ui.button("Back").clicked() { self.panel = Panel::Pause; }
                 }
                 Panel::Practice => {
-                    ui.label("Separate from your campaign. Only unlocked levels.");
-                    egui::Grid::new("practice-levels").num_columns(4).show(ui, |ui| {
+                    ui.label("Your campaign stays saved. Choose an unlocked level.");
+                    egui::ScrollArea::vertical().max_height(300.).show(ui, |ui| {
                         for (level, data) in LEVELS.iter().enumerate() {
-                            let button = egui::Button::new(format!("{:02}", level + 1));
-                            if ui.add_enabled(level <= self.save.unlocked, button)
-                                .on_hover_text(format!("{} · best {}", data.name, self.save.practice_best[level]))
-                                .clicked() {
+                            let unlocked = level <= self.save.unlocked;
+                            let label = if unlocked {
+                                format!("{:02}  {}   ·   best {}", level + 1, data.name, self.save.practice_best[level])
+                            } else { format!("{:02}  {}   ·   locked", level + 1, data.name) };
+                            if ui.add_enabled(unlocked, egui::Button::new(label).min_size(Vec2::new(310.,36.))).clicked() {
                                 self.practice = Some(Run::new(level, true, 0x5052414354494345 + level as u64));
+                                self.trails.clear(); self.fragments.clear();
                                 self.resume();
                             }
-                            if level % 4 == 3 { ui.end_row(); }
                         }
                     });
                     if ui.button("Back").clicked() { self.panel = Panel::Pause; }
@@ -472,6 +520,13 @@ impl App {
             self.run().score
         ));
         ui.label(LEVELS[self.run().level].note);
+        if let Some(reason) = &self.pause_reason {
+            ui.label(reason);
+        }
+        if matches!(self.run().phase, Phase::Clear | Phase::Complete) {
+            ui.label("Board cleared · 1,000 point bonus");
+        }
+        ui.add_space(6.);
         if self.blocked {
             ui.label("Continue is unavailable. The original save is protected.");
             if ui.button("Recover saved campaign…").clicked() {
@@ -480,12 +535,25 @@ impl App {
         } else {
             match self.run().phase {
                 Phase::Serve | Phase::Playing => {
-                    if ui.button("Continue").clicked() {
+                    if ui
+                        .add_sized(
+                            [ui.available_width(), 38.],
+                            egui::Button::new(if self.run().phase == Phase::Serve {
+                                "Ready to serve"
+                            } else {
+                                "Continue"
+                            }),
+                        )
+                        .clicked()
+                    {
                         self.resume();
                     }
                 }
                 Phase::Clear if self.practice.is_none() => {
-                    if ui.button("Next Level").clicked() {
+                    if ui
+                        .add_sized([ui.available_width(), 38.], egui::Button::new("Next Level"))
+                        .clicked()
+                    {
                         self.save.campaign.next();
                         self.persist();
                         self.resume();
@@ -539,8 +607,8 @@ impl App {
         }
     }
 }
-impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+impl App {
+    fn draw(&mut self, ctx: &egui::Context) {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last).as_secs_f64();
         self.last = now;
@@ -548,7 +616,11 @@ impl eframe::App for App {
             self.theme = omarchy_chess::theme::Theme::load();
             self.themed = now;
         }
-        let mut visuals = if self.theme.background.r() > 150 {
+        let mut visuals = if (u32::from(self.theme.background.r()) * 299
+            + u32::from(self.theme.background.g()) * 587
+            + u32::from(self.theme.background.b()) * 114)
+            > 150_000
+        {
             egui::Visuals::light()
         } else {
             egui::Visuals::dark()
@@ -568,6 +640,7 @@ impl eframe::App for App {
         });
         if (!focus || gone) && self.panel == Panel::Play {
             self.suspend();
+            self.pause_reason = Some("Paused because you left the game. Resume when ready.".into());
         }
         if ctx.input(|i| i.key_pressed(Key::Escape)) {
             if self.panel == Panel::Play {
@@ -593,7 +666,17 @@ impl eframe::App for App {
         egui::TopBottomPanel::top("shatter-controls").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.strong("SHATTER");
-                if ui.button("Pause / Resume").clicked() {
+                if ui
+                    .add_enabled(
+                        !self.blocked && matches!(self.run().phase, Phase::Serve | Phase::Playing),
+                        egui::Button::new(if self.panel == Panel::Play {
+                            "Pause"
+                        } else {
+                            "Resume"
+                        }),
+                    )
+                    .clicked()
+                {
                     if self.panel == Panel::Play {
                         self.suspend();
                     } else if self.panel == Panel::Pause && !self.blocked {
@@ -620,6 +703,14 @@ impl eframe::App for App {
             if let Some(e) = &self.error {
                 ui.label(e);
             }
+            if let Some(e) = self.write_error.clone() {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(e);
+                    if ui.button("Retry save").clicked() {
+                        self.suspend();
+                    }
+                });
+            }
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             arcade_presentation::backdrop(ui);
@@ -631,8 +722,8 @@ impl eframe::App for App {
                 self.pending_launch |= input.launch;
                 match self.clock.advance(elapsed) {
                     Err(reason) => {
-                        self.cue = Some((reason.into(), now));
                         self.suspend();
+                        self.pause_reason = Some(reason.into());
                     }
                     Ok(ticks) => {
                         for _ in 0..ticks {
@@ -651,6 +742,21 @@ impl eframe::App for App {
                                 if let Event::Destroy(p) | Event::Damage(p) = event {
                                     self.fragments.push((*p, now));
                                 }
+                                if *event == Event::Lost {
+                                    self.trails.clear();
+                                    self.cue = Some((
+                                        format!("Ball lost · {} lives left", self.run().lives),
+                                        now,
+                                    ));
+                                }
+                                if let Event::Pickup(kind) = event {
+                                    let text = match kind {
+                                        Power::Expand => "Expanded paddle · 15 seconds",
+                                        Power::Laser => "Lasers ready · hold click or Space",
+                                        Power::Multiball => "Multiball · keep the last ball alive",
+                                    };
+                                    self.cue = Some((text.into(), now));
+                                }
                                 if *event == Event::Redirect {
                                     self.cue = Some(("New angle".into(), now));
                                 }
@@ -661,7 +767,7 @@ impl eframe::App for App {
                                         Event::Paddle => 0,
                                         Event::Damage(_) => 1,
                                         Event::Destroy(_) => 5,
-                                        Event::Pickup => 3,
+                                        Event::Pickup(_) => 3,
                                         Event::Lost => 4,
                                         Event::Clear => 2,
                                         Event::Redirect => 0,
@@ -696,7 +802,16 @@ impl eframe::App for App {
         if self.checkpoint.elapsed() > Duration::from_secs(15) {
             self.persist();
         }
-        ctx.request_repaint_after(Duration::from_millis(8));
+        ctx.request_repaint_after(if self.panel == Panel::Play {
+            Duration::from_millis(8)
+        } else {
+            Duration::from_millis(100)
+        });
+    }
+}
+impl eframe::App for App {
+    fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+        self.draw(ctx);
     }
     fn on_exit(&mut self, _: Option<&eframe::glow::Context>) {
         self.suspend();
@@ -773,5 +888,128 @@ mod tests {
             vec![egui::Event::PointerMoved(Pos2::new(400., 300.))],
         );
         assert_eq!(mouse.target, Some(300.));
+    }
+    fn frame(app: &mut App, ctx: &egui::Context, events: Vec<egui::Event>) -> egui::FullOutput {
+        ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(900., 760.))),
+                focused: true,
+                events,
+                ..Default::default()
+            },
+            |ctx| app.draw(ctx),
+        )
+    }
+    fn label_center(output: &egui::FullOutput, label: &str) -> Pos2 {
+        output
+            .shapes
+            .iter()
+            .find_map(|s| match &s.shape {
+                egui::Shape::Text(t) if t.galley.job.text == label => {
+                    Some(t.pos + t.galley.size() / 2.)
+                }
+                _ => None,
+            })
+            .unwrap_or_else(|| panic!("Missing visible action: {label}"))
+    }
+    fn click_label(app: &mut App, ctx: &egui::Context, label: &str) {
+        frame(app, ctx, vec![]);
+        let out = frame(app, ctx, vec![]);
+        let pos = label_center(&out, label);
+        for pressed in [true, false] {
+            frame(
+                app,
+                ctx,
+                vec![
+                    egui::Event::PointerMoved(pos),
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            );
+        }
+    }
+    #[test]
+    fn mouse_menu_next_level_and_practice_preserve_campaign() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::from_path(dir.path().join("shatter.json"));
+        app.save.sound = false;
+        let ctx = egui::Context::default();
+        app.suspend();
+        click_label(&mut app, &ctx, "Ready to serve");
+        assert!(app.panel == Panel::Play);
+        assert_eq!(app.run().phase, Phase::Serve);
+        app.suspend();
+        app.save.campaign.phase = Phase::Clear;
+        for b in &mut app.save.campaign.bricks {
+            if b.kind != 3 {
+                b.hp = 0;
+            }
+        }
+        app.persist();
+        click_label(&mut app, &ctx, "Next Level");
+        assert_eq!(app.run().level, 1);
+        assert_eq!(app.run().phase, Phase::Serve);
+        assert!(app.run().balls.is_empty());
+        app.suspend();
+        let campaign = app.save.campaign.clone();
+        click_label(&mut app, &ctx, "Practice…");
+        click_label(&mut app, &ctx, "01  First light   ·   best 0");
+        assert!(app.practice.is_some());
+        app.suspend();
+        click_label(&mut app, &ctx, "Return to campaign");
+        assert!(app.practice.is_none());
+        assert_eq!(app.save.campaign, campaign);
+        assert_eq!(storage::load(&app.path).unwrap().campaign, campaign);
+    }
+    #[test]
+    fn restart_cancel_and_failed_save_retry_keep_progress() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("shatter.json");
+        let mut app = App::from_path(path.clone());
+        app.save.sound = false;
+        app.save.campaign.score = 123;
+        app.suspend();
+        let ctx = egui::Context::default();
+        click_label(&mut app, &ctx, "Restart…");
+        click_label(&mut app, &ctx, "Keep playing");
+        assert_eq!(app.run().score, 123);
+        app.path = dir.path().to_owned();
+        app.suspend();
+        assert!(app.write_error.is_some());
+        app.path = path;
+        click_label(&mut app, &ctx, "Retry save");
+        assert!(app.write_error.is_none());
+        assert_eq!(storage::load(&app.path).unwrap().campaign.score, 123);
+    }
+    #[test]
+    fn focus_loss_stall_and_terminal_resume_are_safe() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::from_path(dir.path().join("s.json"));
+        app.save.sound = false;
+        let ctx = egui::Context::default();
+        frame(&mut app, &ctx, vec![]);
+        app.last = Instant::now() - Duration::from_secs(1);
+        frame(&mut app, &ctx, vec![]);
+        assert!(app.panel == Panel::Pause);
+        assert!(app.pause_reason.as_ref().unwrap().contains("stalled"));
+        app.resume();
+        let _ = ctx.run(
+            egui::RawInput {
+                focused: false,
+                events: vec![egui::Event::WindowFocused(false)],
+                ..Default::default()
+            },
+            |ctx| app.draw(ctx),
+        );
+        assert!(app.panel == Panel::Pause);
+        assert!(app.pause_reason.as_ref().unwrap().contains("left"));
+        app.save.campaign.phase = Phase::Over;
+        app.save.campaign.lives = 0;
+        app.resume();
+        assert!(app.panel == Panel::Pause);
     }
 }

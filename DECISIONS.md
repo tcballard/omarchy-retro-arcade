@@ -100,3 +100,11 @@ input separately from the0.4-second physical pulse: a rested meter warns around
 ### Contributor integration
 
 Combine #21–#28 on current main while retaining contributor commits. CircuitGeometry replaces the alternate #19 layout and duplicate launcher constants. Retain #19's boundary/depth regression intent and bumper-cap occlusion using the shared geometry. Use direct plate copies with portrait cropping; one status priority for both layouts (pause, game over, tilt/danger, charge, notice). Exercise normal fixed-time launches without a contact-release test shim. Wire native classic-control, resizing, geometry and nudge regressions into CI. #29 save protection and #30 build-job limits land independently.
+
+### Shatter polish
+
+Keep the v1 physics and save schema stable during presentation polish. Use explicit
+serve/pause states, persistent pause explanations, named practice choices and
+save retry feedback. Verify menu clicks through real egui events and include all
+eleven entries in the native mouse harness. Separate CI screenshots and automated
+input from hands-on Omarchy feel acceptance.

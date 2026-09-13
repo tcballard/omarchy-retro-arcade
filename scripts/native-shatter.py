@@ -28,11 +28,17 @@ with tempfile.TemporaryDirectory(prefix='arcade-shatter-') as tmp:
         # An existing campaign always opens paused, regardless of WM focus order.
         app,w=launch();key(0x20);key(ord('m'),True)
         assert read()['campaign']==original['campaign'], 'Paused Space must not serve'
-        key(0xff1b);key(0x20);time.sleep(.15);key(0xff1b)
+        key(0xff1b);capture('ready-to-serve');key(0x20);time.sleep(.15);capture('playing');key(0xff1b)
         playing=read()['campaign'];assert playing['phase']=='Playing';assert len(playing['balls'])==1
         capture('paused-flight')
         key(0xff53,hold=.1);key(0x20);key(ord('m'),True)
         assert read()['campaign']==playing, 'Paused gameplay must not leak'
+        # Resume and move entirely by pointer, then pause using the toolbar.
+        click(105,65)
+        xt.XTestFakeMotionEvent(display,-1,900,600,0);x.XFlush(display);time.sleep(.3)
+        click(105,65)
+        moved=read()['campaign'];assert moved['paddle']>playing['paddle']+40, (playing['paddle'],moved['paddle'])
+        playing=moved
         key(ord('h'),True);assert windows()==[w];capture('shelf')
         key(0xff0d);assert windows()==[w];assert read()['campaign']==playing
         key(ord('q'),True);app.wait(timeout=8)
