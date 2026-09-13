@@ -8,12 +8,12 @@ A collection of classic games for Omarchy. Play pinball, cards, puzzles and arca
 
 ![Omarchy Arcade's opening collection, with a full Pinball preview and all nine games in the selector](docs/polish/shelf.png)
 
-Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048
+Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048 · Shatter
 
 **Development preview for x86_64 Omarchy.** The nine-game build passes native Linux and Arch installation checks. [Verification and remaining desktop playtesting](docs/VERIFICATION.md).
 
-2048 is included when building this source revision. The older preview download below
-contains nine games and does **not** include 2048.
+2048 and Shatter are included when building this source revision. The older preview download below
+contains nine games and does **not** include 2048 or Shatter.
 
 ## Install
 
@@ -73,7 +73,7 @@ PRs, issues and playtesting are encouraged. [Report a bug, suggest an improvemen
 ## Source layout
 
 - `arcade/`: the Rust app, collection shelf and local Pinball transport.
-- `games/`: ten ordinary game directories, preserving all imported Git history.
+- `games/`: eleven ordinary game directories, preserving all imported Git history.
 - `packaging/`: one Arch package, icon and desktop entry.
 - `scripts/`: shared build, staging and verification entry points.
 - `shared/presentation/`: shared cabinet materials, control styling and artwork.
@@ -91,3 +91,5 @@ See [migration provenance](docs/MIGRATION.md), [integration decisions](DECISIONS
 Stack includes offline Marathon and 40-line Sprint, local records and exact resumable runs. See [Stack rules](games/stack/docs/RULES.md), [verification](games/stack/docs/VERIFICATION.md) and the [leaderboard hosting proposal](services/leaderboard/HOSTING.md). Public sharing awaits deployment approval.
 
 2048 is adapted from [Avi Barit (avibarit)](https://github.com/avibarit/2048), with permission reported by Tom Ballard. Original 2048 by [Gabriele Cirulli](https://github.com/gabrielecirulli/2048). [Controls, saves and credits](games/2048/README.md).
+
+Shatter is an original brick breaker: 20 authored levels, mouse/keyboard play, three power-ups, campaign saves and unlocked-level practice. [Controls and verification](games/shatter/README.md). Hands-on Omarchy acceptance is pending.

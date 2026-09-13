@@ -1,0 +1,17 @@
+[package]
+name = "omarchy-shatter"
+version.workspace = true
+edition = "2021"
+license = "GPL-3.0-or-later"
+
+[features]
+default = ["desktop"]
+desktop = ["dep:eframe", "dep:arcade-presentation", "dep:omarchy-chess"]
+
+[dependencies]
+arcade-presentation = { path = "../../shared/presentation", optional = true }
+eframe = { version = "=0.31.1", default-features = false, features = ["default_fonts", "glow", "wayland", "x11", "accesskit"], optional = true }
+omarchy-chess = { path = "../chess", optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+tempfile = "3"

@@ -2659,6 +2659,7 @@ dependencies = [
  "omarchy-chess",
  "omarchy-invaders",
  "omarchy-scram",
+ "omarchy-shatter",
  "omarchy-snake",
  "omarchy-solitaire",
  "omarchy-stack",
@@ -2678,6 +2679,18 @@ dependencies = [
  "serde_json",
  "tempfile",
  "toml",
+]
+
+[[package]]
+name = "omarchy-shatter"
+version = "0.1.0"
+dependencies = [
+ "arcade-presentation",
+ "eframe",
+ "omarchy-chess",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]
