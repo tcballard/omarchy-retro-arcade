@@ -10,21 +10,44 @@ use std::{
 };
 const WIDTH: usize = 1152;
 const HEIGHT: usize = 790;
-fn read_frame(reader: &mut impl Read) -> io::Result<Vec<u8>> {
+const MAX_DIMENSION: usize = 1600;
+const MAX_PIXELS: usize = 1_000_000;
+struct FramePixels {
+    size: [usize; 2],
+    bytes: Vec<u8>,
+}
+fn valid_size([width, height]: [usize; 2]) -> bool {
+    (64..=MAX_DIMENSION).contains(&width)
+        && (64..=MAX_DIMENSION).contains(&height)
+        && width * height <= MAX_PIXELS
+}
+fn surface_size(size: egui::Vec2) -> [usize; 2] {
+    let width = size.x.max(64.0);
+    let height = size.y.max(64.0);
+    let scale = 1.0_f32
+        .min(MAX_DIMENSION as f32 / width.max(height))
+        .min((MAX_PIXELS as f32 / (width * height)).sqrt());
+    [
+        ((width * scale) as usize / 8 * 8).max(64),
+        ((height * scale) as usize / 8 * 8).max(64),
+    ]
+}
+fn read_frame(reader: &mut impl Read) -> io::Result<FramePixels> {
     let mut header = [0; 12];
     reader.read_exact(&mut header)?;
-    if &header[..4] != b"OAR1"
-        || u32::from_le_bytes(header[4..8].try_into().unwrap()) != WIDTH as u32
-        || u32::from_le_bytes(header[8..12].try_into().unwrap()) != HEIGHT as u32
-    {
+    let size = [
+        u32::from_le_bytes(header[4..8].try_into().unwrap()) as usize,
+        u32::from_le_bytes(header[8..12].try_into().unwrap()) as usize,
+    ];
+    if &header[..4] != b"OAR1" || !valid_size(size) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "Invalid Circuit frame",
         ));
     }
-    let mut bytes = vec![0; WIDTH * HEIGHT * 4];
+    let mut bytes = vec![0; size[0] * size[1] * 4];
     reader.read_exact(&mut bytes)?;
-    Ok(bytes)
+    Ok(FramePixels { size, bytes })
 }
 fn helper() -> io::Result<PathBuf> {
     let exe = std::env::current_exe()?;
@@ -75,7 +98,7 @@ impl Drop for Worker {
 }
 pub struct Pinball {
     worker: Worker,
-    pixels: Arc<Mutex<Option<Vec<u8>>>>,
+    pixels: Arc<Mutex<Option<FramePixels>>>,
     errors: mpsc::Receiver<String>,
     texture: Option<egui::TextureHandle>,
     error: Option<String>,
@@ -84,6 +107,8 @@ pub struct Pinball {
     mouse_down: bool,
     held_keys: HashSet<Key>,
     started: Instant,
+    requested_size: [usize; 2],
+    resize_candidate: ([usize; 2], Instant),
 }
 impl Pinball {
     pub fn ready(&self) -> bool {
@@ -118,7 +143,7 @@ impl Pinball {
     }
     pub fn new(ctx: &egui::Context) -> io::Result<Self> {
         let mut child = Command::new(helper()?)
-            .args(["--arcade-bridge", "--omarchy-table", "-sw"])
+            .args(["--arcade-bridge", "--omarchy-table"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -178,6 +203,8 @@ impl Pinball {
             mouse_down: false,
             held_keys: HashSet::new(),
             started: Instant::now(),
+            requested_size: [WIDTH, HEIGHT],
+            resize_candidate: ([WIDTH, HEIGHT], Instant::now()),
         })
     }
     fn send(&mut self, command: String) {
@@ -237,7 +264,7 @@ impl eframe::App for Pinball {
             );
         }
         if let Some(bytes) = self.pixels.lock().ok().and_then(|mut p| p.take()) {
-            let image = egui::ColorImage::from_rgba_unmultiplied([WIDTH, HEIGHT], &bytes);
+            let image = egui::ColorImage::from_rgba_unmultiplied(bytes.size, &bytes.bytes);
             if let Some(t) = &mut self.texture {
                 t.set(image, egui::TextureOptions::LINEAR);
             } else {
@@ -251,13 +278,23 @@ impl eframe::App for Pinball {
         }
         self.focused = focused;
         egui::CentralPanel::default()
-            .frame(egui::Frame::NONE)
+            .frame(egui::Frame::NONE.fill(egui::Color32::from_rgb(5, 8, 8)))
             .show(ctx, |ui| {
                 if let Some(error) = &self.error {
                     ui.heading("Circuit needs attention");
                     ui.label(error);
                     ui.label("Use Back to Arcade to choose another game.");
                     return;
+                }
+                let desired = surface_size(ui.available_size());
+                if desired != self.resize_candidate.0 {
+                    self.resize_candidate = (desired, Instant::now());
+                }
+                if desired != self.requested_size
+                    && self.resize_candidate.1.elapsed() >= Duration::from_millis(100)
+                {
+                    self.send(format!("resize {} {}", desired[0], desired[1]));
+                    self.requested_size = desired;
                 }
                 let Some(texture) = &self.texture else {
                     ui.centered_and_justified(|ui| {
@@ -267,9 +304,12 @@ impl eframe::App for Pinball {
                 };
                 let size = texture.size_vec2();
                 let scale = (ui.available_width() / size.x).min(ui.available_height() / size.y);
-                let image = ui.add(
+                let available = ui.available_rect_before_wrap();
+                let rect = egui::Rect::from_center_size(available.center(), size * scale);
+                let image = ui.put(
+                    rect,
                     egui::Image::new(texture)
-                        .fit_to_exact_size(size * scale)
+                        .fit_to_exact_size(rect.size())
                         .sense(egui::Sense::click_and_drag()),
                 );
                 let rect = image.rect;
@@ -352,6 +392,30 @@ mod tests {
         }
     }
     #[test]
+    fn surface_budget_preserves_tall_and_wide_aspects() {
+        for size in [
+            egui::vec2(941.0, 984.0),
+            egui::vec2(3840.0, 2160.0),
+            egui::vec2(640.0, 1200.0),
+            egui::vec2(8000.0, 64.0),
+        ] {
+            let actual = surface_size(size);
+            assert!(valid_size(actual), "{actual:?}");
+        }
+        let tall = surface_size(egui::vec2(941.0, 984.0));
+        assert!(tall[1] > tall[0]);
+        assert!(!valid_size([1600, 1600]));
+        assert!(!valid_size([0, 790]));
+    }
+    #[test]
+    fn accepts_resized_frame() {
+        let mut data = b"OAR1".to_vec();
+        data.extend(640_u32.to_le_bytes());
+        data.extend(960_u32.to_le_bytes());
+        data.resize(12 + 640 * 960 * 4, 255);
+        assert_eq!(read_frame(&mut data.as_slice()).unwrap().size, [640, 960]);
+    }
+    #[test]
     fn rejects_unbounded_or_unknown_frames() {
         assert!(read_frame(&mut &b"OAR1\xff\xff\xff\xff\xff\xff\xff\xff"[..]).is_err());
         assert!(read_frame(&mut &b"bad!\x80\x04\0\0\x16\x03\0\0"[..]).is_err());
@@ -361,7 +425,7 @@ mod tests {
         let mut data = b"OAR1\x80\x04\0\0\x16\x03\0\0".to_vec();
         data.resize(12 + WIDTH * HEIGHT * 4, 127);
         assert_eq!(
-            read_frame(&mut data.as_slice()).unwrap().len(),
+            read_frame(&mut data.as_slice()).unwrap().bytes.len(),
             WIDTH * HEIGHT * 4
         );
         data.pop();

@@ -64,3 +64,39 @@ Z and slash alias A/D with shared held-key state. Release the logical action onl
 - Campaign state and progression share a new versioned private atomic `omarchy-retro-arcade/shatter.json`; practice is a separate in-memory run and only updates separate per-level bests. Resumption always pauses. Invalid, incompatible and future saves disable writes until an explicit archive-and-reset action succeeds. No other game's data is migrated.
 - Existing Omarchy palette and shared cabinet materials frame native geometry. New cues reuse Bubble's owned/reaped PCM player. All assets and layouts are original and documented. Sound and reduced effects remain per-game preferences, matching the existing app.
 - Native screenshot/input checks and Arch install/upgrade gates are included in CI. Hands-on Omarchy/Wayland acceptance remains required before calling issue #7 complete.
+
+### Connected Circuit boundaries and traversable routes
+
+Use connected two-sided capsule chains, closed obstacle bodies, explicit ground
+and raised layers, and a ground underpass beneath the high ramp arch. Preserve
+full-ball-width playable routes and intentional drains. Only the lower mouth
+enters the raised tube; its upper portal is outgoing-only. Close both low tube
+supports without spanning the underpass. Diagnostics reject illegal interiors,
+rail penetration, trapping and wrong entry provenance; they never teleport or
+rescue production balls. Keep approved art and upstream physics unchanged.
+### Reliable spring charging and contact
+
+Align the ground ball and contact head to the visible coil, animate existing coil pixels from real charge, and retain a 0.75-second one-shot release window through rapid re-presses. The upstream plunger default remains zero for imported resources. Charge text reflects real engine state; the artwork file is unchanged.
+### Passive scoring-target response
+
+Stand-up targets and side modules score through the upstream wall response with zero powered boost. Powered bumpers and slings retain their impulses. Contact tracing and real-engine shots distinguish scoring events from energy injection. Geometry is unchanged here.
+### Circuit bridge rendering
+
+Prefer the SDL offscreen video driver with accelerated rendering and retain software fallback. Create the bridge window at its final dimensions before its renderer. Copy the rectangular table texture directly in ImGui draw order, avoiding software textured-triangle work while retaining overlays and unchanged artwork. This follows the tiled-quad visibility workaround with a direct-copy path.
+### Responsive pinball bridge
+
+Debounce bounded logical surface sizes and resize the SDL render target without restarting the worker. Tall layouts use the full playfield plus a lower HUD, and the host paints its full panel. Pointer coordinates follow the displayed frame; upstream mouse ownership and dialog gating are preserved.
+### Circuit elapsed simulation time
+
+Retain up to100ms elapsed time and advance it in bounded120Hz substeps so render/transport stalls do not discard ordinary simulation time. Preserve classic-resource timing. A slow-consumer bridge test compares elapsed wall and engine time.
+### Circuit nudge and tilt feedback
+
+Render bounded displacement from active upstream nudge flags. Pause/focus loss
+releases held nudges and centres the board. Display DANGER/TILT in the custom HUD;
+retain upstream flipper/scoring penalties and next-ball recovery. Track held
+input separately from the0.4-second physical pulse: a rested meter warns around
+0.875s and tilts around1.75s. Classic-resource behavior remains unchanged.
+
+### Contributor integration
+
+Combine #21–#28 on current main while retaining contributor commits. CircuitGeometry replaces the alternate #19 layout and duplicate launcher constants. Retain #19's boundary/depth regression intent and bumper-cap occlusion using the shared geometry. Use direct plate copies with portrait cropping; one status priority for both layouts (pause, game over, tilt/danger, charge, notice). Exercise normal fixed-time launches without a contact-release test shim. Wire native classic-control, resizing, geometry and nudge regressions into CI. #29 save protection and #30 build-job limits land independently.

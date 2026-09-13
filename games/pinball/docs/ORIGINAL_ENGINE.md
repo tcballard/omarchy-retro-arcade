@@ -28,30 +28,27 @@ Circuit settings and high scores remain in the existing per-user Circuit directo
 
 ## Table/artwork alignment
 
-The authored layout in `CircuitLayout.h` measures the unchanged 1536 × 1024
-plate. The DAT builder uses closed footprints for the slingshots, target bodies,
-return guides and apron rails, plus circular post footprints. Kicking target faces
-point toward the playfield; passive backs prevent entry through the other sides.
-The launcher sits at the pictured launch head. Its raised hood is a foreground
-piece, leaving an open route beneath it.
+The authored layout in `CircuitGeometry.h` is the single owner of collision,
+launcher and bumper measurements on the unchanged plate. Connected two-sided
+rails have round joints and end caps; slings and scoring banks have closed backs.
+Passive targets score without powered energy. The launcher sits at the visible
+coil head and uses a release window that survives the ball's bounce phase.
 
-The ramp's deck and collision rails share one centreline. Rounded rail joins close
-ball-radius gaps at bends. Low entry guards are ground-level obstacles; higher
-sections allow the ground ball underneath. CircuitView copies the original plate
-pixels back over ground balls beneath the ramp and hood, and over balls behind
-bumper caps and posts. Balls on the ramp remain above its deck but behind its side
-rails. This does not modify the official artwork or the upstream physics engine.
+Ground balls pass beneath the high bridge; raised balls remain above its deck.
+The renderer copies alpha-masked plate sprites over ground balls beneath the
+bridge and behind bumper caps, preserving the original artwork without triangle
+seams. Ball drawing and physics share the same image-plane mapping.
 
-The ball uses the same image-plane mapping as the measured ramp, without an extra
-vertical offset that would move it off the illustrated deck. Bumper lamps and the
-launcher rendering also consume shared layout measurements.
+`authored-table-boundaries` retains the earlier boundary regression's intent with
+fixtures on this layout: a round rail endpoint, both slingshot backs, a guide and
+a scoring module face. `authored-table-depth` compares frames with and without a
+ball under/on the high bridge. Standalone decorative post coordinates and the old
+launcher hood/deck layout are superseded by the connected route-tested geometry;
+they are not retained as a second competing set of colliders.
 
-`authored-table-boundaries` exercises a post, both slingshot backs, the left guide
-and a scoring module face using real upstream balls. `authored-table-depth`
-compares software-rendered frames with and without a ball: a ground ball is fully
-hidden under the ramp, while a ball on the ramp is visible. The full-game, ramp,
-target, orbit and drain tests also pass. These checks validate the authored routes;
-they do not substitute for subjective desktop playtesting of every shot.
+See [GEOMETRY.md](GEOMETRY.md) for installed-collider audits, route fixtures,
+39 adversarial trajectories and normal-input launch checks. Native controls,
+resize and nudge lifecycle tests run in CI as well as engine-level checks.
 
 ## Verification
 

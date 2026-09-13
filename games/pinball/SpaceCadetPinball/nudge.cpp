@@ -13,6 +13,7 @@ int nudge::nudged_right;
 int nudge::nudged_up;
 int nudge::timer;
 float nudge::nudge_count;
+unsigned nudge::held_inputs;
 
 void nudge::un_nudge_right(int timerId, void* caller)
 {
@@ -80,4 +81,14 @@ void nudge::_nudge(float xDiff, float yDiff)
 	}
 
 	render::shift(static_cast<int>(floor(xDiff + 0.5f)), static_cast<int>(floor(0.5f - yDiff)));
+}
+
+void nudge::release_all()
+{
+    held_inputs = 0;
+    un_nudge_right(0, nullptr);
+    un_nudge_left(0, nullptr);
+    un_nudge_up(0, nullptr);
+    if (timer) timer::kill(timer);
+    timer = 0;
 }

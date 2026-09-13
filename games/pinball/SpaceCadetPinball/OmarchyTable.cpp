@@ -1,10 +1,12 @@
 #include "pch.h"
 #include "OmarchyTable.h"
-#include "CircuitLayout.h"
+#include "CircuitGeometry.h"
+#include "../tests/CircuitRouteFixtures.h"
 #include "GroupData.h"
 #include "gdrv.h"
 #include "zdrv.h"
 #include "pb.h"
+#include "nudge.h"
 #include "TPinballTable.h"
 #include "TPlunger.h"
 #include "TDrain.h"
@@ -13,6 +15,10 @@
 #include "options.h"
 #include "TTripwire.h"
 #include "TRamp.h"
+#include "TBall.h"
+#include "TLine.h"
+#include "TEdgeManager.h"
+#include "TTableLayer.h"
 #include <map>
 #include <algorithm>
 
@@ -64,7 +70,7 @@ void line(gdrv_bitmap8* b,float x,float y,float xx,float yy,int c,int width=2){
  for(int i=0;i<=n;++i)for(int dy=-width;dy<=width;++dy)for(int dx=-width;dx<=width;++dx)pixel(b,(int)(x+(xx-x)*i/n)+dx,(int)(y+(yy-y)*i/n)+dy,c);
 }
 void circle(gdrv_bitmap8* b,int cx,int cy,int r,int c){for(int y=-r;y<=r;y++)for(int x=-r;x<=r;x++)if(x*x+y*y<=r*r)pixel(b,cx+x,cy+y,c);}
-float wx(float x){return CircuitLayout::worldX(x);} float wy(float y){return CircuitLayout::worldY(y);}
+float wx(float x){return (x-540)/25;} float wy(float y){return (y-500)/25;}
 
 }
 DatFile* Build(){
@@ -93,6 +99,7 @@ DatFile* Build(){
  auto mission=group("mission_text_box");shorts(mission,{1500,405,270,185,130,0,0,0,0});object(mission,1033);
  auto mat=group(nullptr,300);floats(mat,{301,.95f,302,.8f});
  auto kick=group(nullptr,400);floats(kick,{401,1,402,28});
+ auto targetContact=group(nullptr,400);floats(targetContact,{401,1,402,0});
  // The collision coordinates below are measured against assets/circuit/table.png.
  // The custom view uses the same 25 pixels/world-unit mapping.
  auto rail=[&](const char* name,float x,float y,float xx,float yy,int mask=0,int kicker=-1){
@@ -100,46 +107,39 @@ DatFile* Build(){
   if(kicker>=0)shorts(g,{300,(int16_t)mat->GroupId,400,(int16_t)kicker,602,(int16_t)mask});
   else shorts(g,{300,(int16_t)mat->GroupId,602,(int16_t)mask});object(g,1000);return g;
  };
- auto path=[&](const char* name,std::initializer_list<vector2> pts,int mask=0){
-  auto prev=pts.begin();for(auto it=prev+1;it!=pts.end();++it){rail(name,prev->X,prev->Y,it->X,it->Y,mask);prev=it;}
+ // A capsule chain has two collision faces and a round cap at every
+ // endpoint/joint. This is shared by cabinet, lane, obstacle and ramp walls.
+ auto cap=[&](const char* name,vector2 point,int layer){
+  auto g=group(name);floats(g,{600,1,wx(point.X),wy(point.Y),0});
+  shorts(g,{300,(int16_t)mat->GroupId,602,(int16_t)layer});object(g,1000);
  };
- // Clockwise outer boundary; roof deflects a launched ball into the bumper field.
- path("outer",{{95,975},{115,770},{155,530},{205,310},{245,145},{290,78},{370,48},{550,44},{700,65},{785,110},{845,190},{885,305},{920,500},{970,975}});
- // Closed physical footprints, including both sides of narrow return guides.
- // Upstream polygon walls supply rounded, ball-radius-offset joins.
- for(const auto& body:CircuitLayout::bodies()){
-  auto pts=body.outline;float area=0;
-  for(size_t i=0;i<pts.size();++i){auto a=pts[i],b=pts[(i+1)%pts.size()];area+=a.x*b.y-b.x*a.y;}
-  // install_wall expects clockwise polygons for outward-facing solid walls.
-  if(area<0)std::reverse(pts.begin(),pts.end());
-  std::vector<float> wall={600,float(pts.size()+1)};
-  for(auto p:pts){wall.push_back(wx(p.x));wall.push_back(wy(p.y));}
-  wall.push_back(wx(pts.front().x));wall.push_back(wy(pts.front().y));
-  auto g=group(body.name);auto e=new EntryData();e->EntryType=FieldTypes::FloatArray;
-  e->FieldSize=wall.size()*sizeof(float);e->Buffer=new char[e->FieldSize];memcpy(e->Buffer,wall.data(),e->FieldSize);g->AddEntry(e);
-  shorts(g,{300,(int16_t)mat->GroupId,602,0});object(g,1000);
- }
+ auto boundary=[&](const char* name,const std::vector<vector2>& pts,int layer){
+  for(size_t i=1;i<pts.size();++i){
+   rail(name,pts[i-1].X,pts[i-1].Y,pts[i].X,pts[i].Y,layer);
+   rail(name,pts[i].X,pts[i].Y,pts[i-1].X,pts[i-1].Y,layer);
+  }
+  for(auto point:pts)cap(name,point,layer);
+ };
+ for(const auto& wall:CircuitGeometry::Walls())for(int layer=0;layer<2;layer++)if(wall.layers&(1<<layer))boundary(wall.name,wall.points,layer);
+ // An intentional one-way gate at the orbit EXIT, not across its floor:
+ // launches pass left into play; field balls cannot re-enter the shooter.
+ rail("shooter_gate",655,38,660,106);
  auto slingKick=group(nullptr,400);floats(slingKick,{401,1,402,20});
- rail("sling_left",360,778,295,635,0,slingKick->GroupId);
- rail("sling_right",755,635,690,778,0,slingKick->GroupId);
- for(auto post:CircuitLayout::posts()){
-  auto g=group("post");floats(g,{600,1,wx(post.x),wy(post.y),post.r/25});
-  shorts(g,{300,(int16_t)mat->GroupId,602,0});object(g,1000);
- }
- // Stand-up targets use the upstream wall/kicker response.
+ rail("sling_left",359,759,298,574,0,slingKick->GroupId);
+ rail("sling_right",767,583,701,764,0,slingKick->GroupId);
+ // Stand-up targets rebound passively through the upstream wall response.
  for(int i=0;i<4;i++){
   std::string n="target"+std::to_string(i);
-  rail(n.c_str(),506+i*29,146,526+i*29,146,0,kick->GroupId);
+  rail(n.c_str(),500+i*28,144,525+i*28,144,0,targetContact->GroupId);
  }
  for(int i=0;i<4;i++){
   std::string n="module"+std::to_string(i);
-  rail(n.c_str(),744-i*7.5f,320+i*26,736.5f-i*7.5f,346+i*26,0,kick->GroupId);
+  rail(n.c_str(),744-i*6,304+i*25,738-i*6,324+i*25,0,targetContact->GroupId);
  }
- // Red stand-ups above the lower module bank also have physical kicking faces.
- rail("upper_target",730,255,709,206,0,kick->GroupId);
- rail("upper_target",709,206,665,165,0,kick->GroupId);
  auto drain=group("drain");floats(drain,{600,2,wx(60),wy(1030),wx(1000),wy(1030)});floats(drain,{407,.8f});shorts(drain,{602,0,602,1});object(drain,1007);
- auto plunger=group("plunger");floats(plunger,{600,2,wx(CircuitLayout::plungerLeft),wy(CircuitLayout::plungerY),wx(CircuitLayout::plungerRight),wy(CircuitLayout::plungerY)});floats(plunger,{601,wx(CircuitLayout::feedX),wy(CircuitLayout::feedY)});object(plunger,1001);
+ const float launcherFloor=CircuitGeometry::LauncherY,launcherLeft=CircuitGeometry::LauncherLeft,launcherRight=CircuitGeometry::LauncherRight;
+ for(int layer=0;layer<2;layer++){cap("launcher_corner",{launcherLeft,launcherFloor},layer);cap("launcher_corner",{launcherRight,launcherFloor},layer);}
+ auto plunger=group("plunger");floats(plunger,{600,2,wx(launcherLeft),wy(launcherFloor),wx(launcherRight),wy(launcherFloor)});floats(plunger,{601,wx(CircuitGeometry::LauncherX),wy(launcherFloor-32)});object(plunger,1001);
  bitmap(plunger,45,12,0,0);
  for(int side=0;side<2;side++){
   float origin=side?720:340,tip=side?598:462;
@@ -148,8 +148,7 @@ DatFile* Build(){
   floats(g,{803,1});floats(g,{804,.055f});floats(g,{805,.095f});object(g,side?1004:1003);
   for(int f=0;f<9;f++){auto state=f?group(nullptr,201):g;bitmap(state,1,1,0,0);}
  }
- const auto& bumpers=CircuitLayout::bumpers();
- for(int i=0;i<4;i++){std::string name="bumper"+std::to_string(i);auto g=group(name.c_str());shorts(g,{100,2,300,(int16_t)mat->GroupId,400,(int16_t)kick->GroupId});floats(g,{600,1,wx(bumpers[i].x),wy(bumpers[i].y),bumpers[i].r/25});floats(g,{407,.12f});object(g,1005);
+ for(int i=0;i<4;i++){const auto& bumper=CircuitGeometry::Bumpers()[i];std::string name="bumper"+std::to_string(i);auto g=group(name.c_str());shorts(g,{100,2,300,(int16_t)mat->GroupId,400,(int16_t)kick->GroupId});floats(g,{600,1,wx(bumper.x),wy(bumper.y),bumper.radius/25});floats(g,{407,.12f});object(g,1005);
   for(int f=0;f<2;f++){auto state=f?group(nullptr,201):g;bitmap(state,1,1,0,0);}
  }
  auto sensor=[&](const char* name,float x,float y,float xx,float yy,int mask=0){
@@ -159,33 +158,24 @@ DatFile* Build(){
  sensor("return",220,735,265,765);sensor("return_back",265,765,220,735);
  // Elevated ramp: a triangulated upstream TRamp surface follows the artwork.
  // Ground and ramp rails use separate collision masks; TRamp switches them at its portals.
- std::vector<CircuitLayout::Point> l,r;CircuitLayout::rampEdges(l,r);
- std::vector<vector2> left,right;
- for(auto p:l)left.push_back({p.x,p.y});for(auto p:r)right.push_back({p.x,p.y});
+ std::vector<vector2> left,right;CircuitGeometry::RampSides(left,right);
+ for(const auto& wall:CircuitGeometry::RampWalls())for(int layer=0;layer<2;layer++)if(wall.layers&(1<<layer))boundary(wall.name,wall.points,layer);
+ // Raised balls may leave the upper portal; ground balls cannot enter it.
+ rail("ramp_exit_gate",left.back().X,left.back().Y,right.back().X,right.back().Y);
  auto ramp=group("ramp");shorts(ramp,{602,1});floats(ramp,{701,.04f});floats(ramp,{1305,1});
  std::vector<float> planes={1300,float((left.size()-1)*2)};
  auto triangle=[&](vector2 a,vector2 b,vector2 c){
-  // Rising deck z = (405 - image_y) * .002, continuous at the entry.
-  planes.insert(planes.end(),{0,-.05f,-.19f,wx(a.X),wy(a.Y),wx(b.X),wy(b.Y),wx(c.X),wy(c.Y),.12f,1.5707963f,0,0});
+  // Rising deck z = (405 - image_y) * .004: the upper bridge
+  // clears a ground ball by y=120, and is continuous at the entry.
+  planes.insert(planes.end(),{0,-.10f,-.38f,wx(a.X),wy(a.Y),wx(b.X),wy(b.Y),wx(c.X),wy(c.Y),.12f,1.5707963f,0,0});
  };
- for(size_t i=0;i+1<left.size();++i){triangle(left[i],right[i],right[i+1]);triangle(left[i],right[i+1],left[i+1]);
-  rail("ramp_rail_l",left[i+1].X,left[i+1].Y,left[i].X,left[i].Y,1);
-  if(i<3)rail("ramp_guard_l",left[i].X,left[i].Y,left[i+1].X,left[i+1].Y,0);
-  rail("ramp_rail_r",right[i].X,right[i].Y,right[i+1].X,right[i+1].Y,1);
-  if(i<3)rail("ramp_guard_r",right[i+1].X,right[i+1].Y,right[i].X,right[i].Y,0);
- }
- // Round the joins between ramp rail segments. Independent one-sided lines
- // otherwise leave gaps at bends after the ball-radius offset is applied.
- for(size_t i=0;i<left.size();++i)for(auto p:{left[i],right[i]}){
-  auto g=group("ramp_rail_join");floats(g,{600,1,wx(p.X),wy(p.Y),0});
-  shorts(g,{300,(int16_t)mat->GroupId,602,1});object(g,1000);
- }
+ for(size_t i=0;i+1<left.size();++i){triangle(left[i],right[i],right[i+1]);triangle(left[i],right[i+1],left[i+1]);}
  auto pe2=new EntryData();pe2->EntryType=FieldTypes::FloatArray;pe2->FieldSize=planes.size()*sizeof(float);pe2->Buffer=new char[pe2->FieldSize];memcpy(pe2->Buffer,planes.data(),pe2->FieldSize);ramp->AddEntry(pe2);
  floats(ramp,{1301,0,1,0,wx(left.front().X),wy(left.front().Y),wx(right.front().X),wy(right.front().Y),0});
- floats(ramp,{1302,0,1,0,wx(right.back().X),wy(right.back().Y),wx(left.back().X),wy(left.back().Y),0});
+ floats(ramp,{1302,0,0,0,wx(right.back().X),wy(right.back().Y),wx(left.back().X),wy(left.back().Y),0});
  floats(ramp,{1303,1,0,wx(left[5].X),wy(left[5].Y),wx(right[5].X),wy(right[5].Y)});object(ramp,1021);
- sensor("ramp_score",335,47,335,96,1);
- sensor("ramp_score_back",335,96,335,47,1);
+ sensor("ramp_score",310,30,310,100,1);
+ sensor("ramp_score_back",310,100,310,30,1);
  sensor("ramp_exit",left.back().X,left.back().Y,right.back().X,right.back().Y,1);
  auto tableObjects=group("table_objects");
  auto e=new EntryData();e->EntryType=FieldTypes::ShortArray;e->FieldSize=(objects.size()+1)*2;e->Buffer=new char[e->FieldSize];((int16_t*)e->Buffer)[0]=1025;memcpy(e->Buffer+2,objects.data(),objects.size()*2);tableObjects->AddEntry(e);
@@ -197,13 +187,188 @@ DatFile* Build(){
  }
  return data;
 }
+namespace {
+bool inside(const std::vector<vector2>& polygon,float x,float y){
+ bool result=false;
+ for(size_t i=0,j=polygon.size()-1;i<polygon.size();j=i++){
+  const auto a=polygon[i],b=polygon[j];
+  if((a.Y>y)!=(b.Y>y) && x<(b.X-a.X)*(y-a.Y)/(b.Y-a.Y)+a.X)result=!result;
+ }
+ return result;
+}
+}
+float pathDistance(const std::vector<vector2>& path,float x,float y){
+ float result=1e9f;
+ for(size_t i=1;i<path.size();++i){
+  auto a=path[i-1],b=path[i];float dx=b.X-a.X,dy=b.Y-a.Y;
+  float t=std::max(0.f,std::min(1.f,((x-a.X)*dx+(y-a.Y)*dy)/(dx*dx+dy*dy)));
+  result=std::min(result,std::hypot(x-a.X-t*dx,y-a.Y-t*dy));
+ }
+ return result;
+}
+const char* InvalidRegion(const TBall* ball){
+ if(!ball->ActiveFlag)return nullptr;
+ const float x=540+25*ball->Position.X,y=500+25*ball->Position.Y;
+ if(!inside(CircuitGeometry::Walls().front().points,x,y))return "cabinet";
+ if(ball->CollisionMask==2){
+  std::vector<vector2> a,b;CircuitGeometry::RampSides(a,b);
+  a.insert(a.end(),b.rbegin(),b.rend());
+  if(!inside(a,x,y))return "ramp footprint";
+ }
+ for(const auto& wall:CircuitGeometry::Walls())if(wall.layers&ball->CollisionMask){
+  if(wall.solid && inside(wall.points,x,y))return wall.name;
+  if(pathDistance(wall.points,x,y)<ball->Radius*25-.3f)return wall.name;
+ }
+ for(const auto& wall:CircuitGeometry::RampWalls())if(wall.layers&ball->CollisionMask)
+  if(pathDistance(wall.points,x,y)<ball->Radius*25-.3f)return "inside tube rail";
+ if(ball->CollisionMask&1){
+  static const auto exitPortal=[] {
+   std::vector<vector2> left,right;CircuitGeometry::RampSides(left,right);
+   return std::vector<vector2>{left.back(),right.back()};
+  }();
+  // TRamp changes to ground exactly on the exit edge; allow only the same
+  // subpixel contact tolerance used by the rail checks, not a ball-wide hole.
+  if(pathDistance(exitPortal,x,y)>.3f)
+   for(const auto& body:CircuitGeometry::GroundRampBodies())
+    if(inside(body,x,y))return "inside ground tube body";
+  for(const auto& bumper:CircuitGeometry::Bumpers())
+   if(std::hypot(x-bumper.x,y-bumper.y)<bumper.radius+ball->Radius*25-.3f)return "inside bumper";
+ }
+ // The launch floor is not a drain: its divider runs all the way to the apron.
+ if(y>CircuitGeometry::LauncherY+1 && x>895+(y-667)*15/378)return "below launcher floor";
+ return nullptr;
+}
+bool AuditGeometry(){
+ auto table=pb::MainTable;auto ball=table->BallList.front();
+ unsigned checked=0;
+ std::vector<CircuitGeometry::Wall> walls=CircuitGeometry::Walls();
+ std::vector<vector2> a,b;CircuitGeometry::RampSides(a,b);
+ for(const auto& wall:CircuitGeometry::RampWalls())walls.push_back(wall);
+ for(const auto& wall:walls)for(size_t i=1;i<wall.points.size();++i){
+  auto a=wall.points[i-1],b=wall.points[i];
+  float dx=b.X-a.X,dy=b.Y-a.Y,len=std::hypot(dx,dy);
+  for(float t:{0.f,.02f,.25f,.5f,.75f,.98f,1.f})for(int sign:{-1,1})for(int layer:{1,2}){
+   if(!(wall.layers&layer))continue;
+   vector2 n={-dy/len*sign,dx/len*sign};
+   ray_type ray{};ray.Origin={wx(a.X+(b.X-a.X)*t+n.X*20),wy(a.Y+(b.Y-a.Y)*t+n.Y*20)};
+   ray.Direction={-n.X,-n.Y};ray.MaxDistance=20.f/25;ray.CollisionMask=layer;
+   float nearest=1e9f;
+   // Inspect installed upstream colliders, not a second geometry algorithm.
+   for(auto component:table->ComponentList)if(component->GroupName && std::string(component->GroupName)==wall.name){
+    auto collision=dynamic_cast<TCollisionComponent*>(component);if(!collision)continue;
+    for(auto edge:collision->EdgeList)if(edge->CollisionGroup&layer)nearest=std::min(nearest,edge->FindCollisionDistance(ray));
+   }
+   if(nearest>ray.MaxDistance){fprintf(stderr,"WALL_GAP %s segment=%zu t=%.2f side=%d layer=%d\n",wall.name,i,t,sign,layer);return false;}
+   // Also require the upstream spatial grid to expose a collision on this ray.
+   ball->EdgeCollisionCount=0;TEdgeSegment* edge=nullptr;
+   if(TTableLayer::edge_manager->FindCollisionDistance(&ray,ball,&edge)>ray.MaxDistance){fprintf(stderr,"GRID_GAP %s segment=%zu\n",wall.name,i);return false;}
+   ++checked;
+  }
+ }
+ for(size_t i=1;i<a.size();++i){
+  vector2 from={(a[i-1].X+b[i-1].X)/2,(a[i-1].Y+b[i-1].Y)/2};
+  vector2 to={(a[i].X+b[i].X)/2,(a[i].Y+b[i].Y)/2};
+  float dx=to.X-from.X,dy=to.Y-from.Y,len=std::hypot(dx,dy);
+  ray_type ray{};ray.Origin={wx(from.X),wy(from.Y)};ray.Direction={dx/len,dy/len};ray.MaxDistance=len/25;ray.CollisionMask=2;
+  for(auto component:table->ComponentList)if(component->GroupName && std::string(component->GroupName).find("ramp_rail_")==0){
+   auto collision=dynamic_cast<TCollisionComponent*>(component);if(!collision)continue;
+   for(auto edge:collision->EdgeList)if((edge->CollisionGroup&2) && edge->FindCollisionDistance(ray)<=ray.MaxDistance){
+    fprintf(stderr,"RAMP_ROUTE_PINCH segment=%zu x=%.2f y=%.2f\n",i,from.X,from.Y);return false;
+   }
+  }
+ }
+ // Independent artwork landmarks catch missing backs, wrongly oriented
+ // scoring faces, a closed drain, and a gate that blocks outgoing launches.
+ struct Landmark {float x,y,xx,yy;const char* expected;};
+ const Landmark landmarks[]={
+  {250,680,310,680,"sling_body_left"},{815,680,740,680,"sling_body_right"},
+  {840,340,765,340,"module_bank"},{504,180,504,150,"target0"},
+  {700,315,780,315,"module0"},{928,825,928,890,"plunger"},{948,825,948,890,"plunger"},
+  {630,80,685,80,"shooter_gate"},{685,80,630,80,nullptr},
+  {540,980,540,1040,"drain"},{374,435,374,390,"ramp"},
+  {480,160,438,124,"target_bank"}
+ };
+ for(const auto& test:landmarks){
+  float dx=test.xx-test.x,dy=test.yy-test.y,len=std::hypot(dx,dy);
+  ray_type ray{};ray.Origin={wx(test.x),wy(test.y)};ray.Direction={dx/len,dy/len};ray.MaxDistance=len/25;ray.CollisionMask=1;
+  ball->EdgeCollisionCount=0;TEdgeSegment* edge=nullptr;
+  float distance=TTableLayer::edge_manager->FindCollisionDistance(&ray,ball,&edge);
+  const char* found=distance<=ray.MaxDistance && edge ? edge->CollisionComponent->GroupName : nullptr;
+  if((test.expected==nullptr)!=(found==nullptr) || (test.expected && found && strcmp(test.expected,found))){
+   fprintf(stderr,"LANDMARK_FAIL %.0f,%.0f -> %.0f,%.0f expected=%s found=%s\n",test.x,test.y,test.xx,test.yy,test.expected?test.expected:"open",found?found:"open");return false;
+  }
+ }
+ // These routes describe playable passages independently of wall construction.
+ // Sweep the ball against every installed component, including endpoint caps,
+ // rather than checking only a wall's own centreline or global map bounds.
+ unsigned routeSegments=0;
+ const auto savedPosition=ball->Position;const auto savedActive=ball->ActiveFlag;const auto savedMask=ball->CollisionMask;
+ ball->ActiveFlag=1;ball->CollisionMask=1;
+ for(const auto& route:CircuitRouteFixtures::Routes())for(size_t i=1;i<route.points.size();++i){
+  auto a=route.points[i-1],b=route.points[i];
+  float dx=b.X-a.X,dy=b.Y-a.Y,len=std::hypot(dx,dy);
+  for(float t=0;t<=len;t+=1){
+   ball->Position.X=wx(a.X+dx*t/len);ball->Position.Y=wy(a.Y+dy*t/len);
+   if(const char* region=InvalidRegion(ball)){fprintf(stderr,"ROUTE_REGION %s %s\n",route.name,region);return false;}
+  }
+  ray_type ray{};ray.Origin={wx(a.X),wy(a.Y)};ray.Direction={dx/len,dy/len};ray.MaxDistance=len/25;ray.CollisionMask=1;
+  for(auto component:table->ComponentList){
+   if(dynamic_cast<TTripwire*>(component)||dynamic_cast<TDrain*>(component))continue;
+   auto collision=dynamic_cast<TCollisionComponent*>(component);if(!collision)continue;
+   for(auto edge:collision->EdgeList)if((edge->CollisionGroup&1) && edge->FindCollisionDistance(ray)<=ray.MaxDistance){
+    fprintf(stderr,"ROUTE_BLOCKED %s segment=%zu at=%.0f,%.0f obstacle=%s\n",route.name,i,a.X,a.Y,component->GroupName?component->GroupName:"unnamed");return false;
+   }
+  }
+  ++routeSegments;
+ }
+ ball->Position=savedPosition;ball->ActiveFlag=savedActive;ball->CollisionMask=savedMask;
+ printf("PLAYABLE_ROUTES %zu routes, %u installed-collider sweeps passed\n",CircuitRouteFixtures::Routes().size(),routeSegments);
+ // Audit every bumper around its full circumference, not only one hit face.
+ unsigned bumperProbes=0;
+ for(size_t i=0;i<CircuitGeometry::Bumpers().size();++i){
+  const auto& b=CircuitGeometry::Bumpers()[i];std::string name="bumper"+std::to_string(i);
+  std::vector<vector2> outline;
+  for(int step=0;step<64;++step){
+   float angle=step*6.2831853f/64,dx=std::cos(angle),dy=std::sin(angle);
+   outline.push_back({b.x+dx*b.radius,b.y+dy*b.radius});
+   ray_type ray{};ray.Origin={wx(b.x+dx*(b.radius+20)),wy(b.y+dy*(b.radius+20))};ray.Direction={-dx,-dy};ray.MaxDistance=20.f/25;ray.CollisionMask=1;
+   float nearest=1e9f;
+   for(auto component:table->ComponentList)if(component->GroupName && name==component->GroupName){
+    auto collision=dynamic_cast<TCollisionComponent*>(component);
+    for(auto edge:collision->EdgeList)if(edge->CollisionGroup&1)nearest=std::min(nearest,edge->FindCollisionDistance(ray));
+   }
+   if(nearest>ray.MaxDistance){fprintf(stderr,"BUMPER_GAP %s angle=%d\n",name.c_str(),step);return false;}
+   ++bumperProbes;
+  }
+  outline.push_back(outline.front());
+  static const char* names[]={"bumper0","bumper1","bumper2","bumper3"};
+  walls.push_back({names[i],outline,true,1});
+ }
+ printf("BUMPER_BOUNDARIES %u circumference probes passed\n",bumperProbes);
+ if(const char* path=getenv("OMARCHY_TEST_MAP")){
+  FILE* out=fopen(path,"w");if(!out)return false;
+  fprintf(out,"[\n");
+  for(size_t i=0;i<walls.size();++i){const auto& w=walls[i];
+   fprintf(out,"%s{\"name\":\"%s\",\"solid\":%s,\"layers\":%d,\"points\":[",i?",\n":"",w.name,w.solid?"true":"false",w.layers);
+   for(size_t j=0;j<w.points.size();++j)fprintf(out,"%s[%.3f,%.3f]",j?",":"",w.points[j].X,w.points[j].Y);
+   fprintf(out,"]}");
+  }
+  fprintf(out,"\n]\n");fclose(out);
+ }
+ printf("GEOMETRY_AUDIT %u directional wall/grid probes, %zu landmarks and ramp route passed\n",checked,sizeof(landmarks)/sizeof(landmarks[0]));return true;
+}
 unsigned Progress(){return hits%12;}
 unsigned Targets(){return targetMask;}
 unsigned Orbits(){return orbitCount;}
 unsigned Ramps(){return rampCount;}
 unsigned Circuits(){return circuits;}
 bool GameOver(){return over;}
-const char* Status(){return pb::time_now<noticeUntil||over?notice.c_str():"LIGHT THE CIRCUIT";}
+const char* Status(){
+ if(over)return notice.c_str();
+ if(pb::MainTable->TiltLockFlag)return "TILT  FLIPPERS LOCKED";
+ if(nudge::nudge_count>.5f)return "DANGER  NUDGE LESS";
+ return pb::time_now<noticeUntil?notice.c_str():"LIGHT THE CIRCUIT";
+}
 float Flash(const char* name){auto i=flashes.find(name);return i==flashes.end()?0:std::max(0.f,1-(pb::time_now-i->second)/.25f);}
 void ComponentEvent(MessageCode code,TPinballComponent* c){
  auto t=c->PinballTable;if(!t)return;
@@ -213,11 +378,10 @@ void ComponentEvent(MessageCode code,TPinballComponent* c){
   if(debounce.count(name)&&pb::time_now-debounce[name]<.15f)return;
   debounce[name]=pb::time_now;flashes[name]=pb::time_now;
   if(dynamic_cast<TBumper*>(c)){sound();t->AddScore(100);if(++hits%12==0){++circuits;t->AddScore(2500);announce("CIRCUIT +2500");}}
-  else if(name.find("target")==0||name.find("module")==0){unsigned bit=unsigned(name.back()-'0')+(name[0]=='m'?4:0);targetMask|=1u<<bit;t->AddScore(250);sound();announce("MODULE +250");if(targetMask==255){t->AddScore(5000);targetMask=0;announce("SYSTEM ONLINE +5000");}}
+  else if(name.size()==7 && name.back()>='0' && name.back()<='3' && (name.compare(0,6,"target")==0||name.compare(0,6,"module")==0)){unsigned bit=unsigned(name.back()-'0')+(name[0]=='m'?4:0);targetMask|=1u<<bit;t->AddScore(250);sound();announce("MODULE +250");if(targetMask==255){t->AddScore(5000);targetMask=0;announce("SYSTEM ONLINE +5000");}}
   else if(name=="orbit"||name=="orbit_back"){if(!debounce.count("orbit_award")||pb::time_now-debounce["orbit_award"]>2){debounce["orbit_award"]=pb::time_now;++orbitCount;t->AddScore(1000);announce("ORBIT +1000");sound();}}
   else if(name=="ramp_score"||name=="ramp_score_back"){if(!debounce.count("ramp_award")||pb::time_now-debounce["ramp_award"]>3){debounce["ramp_award"]=pb::time_now;++rampCount;t->AddScore(1500);announce("RAMP +1500");sound();}}
-  else if(name=="upper_target"){t->AddScore(50);sound();announce("TARGET +50");}
-  else if(name.find("sling_")==0){t->AddScore(25);sound();}
+  else if(name=="sling_left"||name=="sling_right"){t->AddScore(25);sound();}
  }
  if(dynamic_cast<TDrain*>(c)&&code==MessageCode::ControlTimerExpired){
   t->ChangeBallCount(t->BallCount-1);
@@ -228,6 +392,6 @@ void ComponentEvent(MessageCode code,TPinballComponent* c){
 void Shutdown(){if(effect){Mix_HaltChannel(-1);Mix_FreeChunk(effect);effect=nullptr;}tone.clear();}
 void TableEvent(MessageCode code){
  if(code==MessageCode::StartGamePlayer1)announce("HOLD SPACE TO LAUNCH");
- if(code==MessageCode::NewGame){pb::MainTable->Plunger->PullbackDelay=.10f;hits=targetMask=orbitCount=rampCount=circuits=0;over=false;debounce.clear();flashes.clear();announce("HOLD SPACE TO LAUNCH");}
+ if(code==MessageCode::NewGame){pb::MainTable->Plunger->PullbackDelay=.10f;pb::MainTable->Plunger->MinimumReleaseDelay=.75f;hits=targetMask=orbitCount=rampCount=circuits=0;over=false;debounce.clear();flashes.clear();announce("HOLD SPACE TO LAUNCH");}
 }
 }

@@ -3,6 +3,8 @@
 
 
 #include "control.h"
+#include "pb.h"
+#include "OmarchyTable.h"
 #include "loader.h"
 #include "TBall.h"
 #include "TEdgeSegment.h"
@@ -137,6 +139,9 @@ void TRamp::Collision(TBall* ball, vector2* nextPosition, vector2* direction, fl
 	auto plane = static_cast<ramp_plane_type*>(edge->WallValue);
 	if (plane)
 	{
+        if(OmarchyTable::Enabled && getenv("OMARCHY_TRACE_RAMP") && ball->CollisionMask != CollisionGroup)
+            fprintf(stderr,"RAMP_ENTRY %.4f %.3f %.3f mask%d->%d\n",pb::time_now,
+                540+25*nextPosition->X,500+25*nextPosition->Y,ball->CollisionMask,CollisionGroup);
 		ball->CollisionFlag = 1;
 		ball->CollisionOffset.X = plane->BallCollisionOffset.X;
 		ball->CollisionOffset.Y = plane->BallCollisionOffset.Y;

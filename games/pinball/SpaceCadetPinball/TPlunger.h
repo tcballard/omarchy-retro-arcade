@@ -20,6 +20,8 @@ public:
 	float MaxPullback;
 	float PullbackIncrement;
 	float PullbackDelay;
+	// Optional authored-table contact window; zero retains original resource behavior.
+	float MinimumReleaseDelay{};
 	int SoundIndexP1;
 	int SoundIndexP2;
 	bool PullbackStartedFlag{};

@@ -3,8 +3,9 @@ from PIL import ImageGrab, ImageChops
 exec(compile((Path(__file__).resolve().parent/'native-check.py').read_text().split('with tempfile.TemporaryDirectory')[0], 'native-input-helpers', 'exec'))
 x.XResizeWindow.argtypes=[C.c_void_p,C.c_ulong,C.c_uint,C.c_uint]
 with tempfile.TemporaryDirectory() as tmp:
- env=dict(os.environ,XDG_STATE_HOME=tmp+'/state',XDG_CONFIG_HOME=tmp+'/config',XDG_DATA_HOME=tmp+'/data',WINIT_X11_SCALE_FACTOR='1')
- app=subprocess.Popen([binary,'--game','pinball'],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ env=dict(os.environ,XDG_STATE_HOME=tmp+'/state',XDG_CONFIG_HOME=tmp+'/config',XDG_DATA_HOME=tmp+'/data',WINIT_X11_SCALE_FACTOR='1',OMARCHY_CHECK_GEOMETRY='1',OMARCHY_TRACE_CONTACTS='1')
+ log=open(Path(tmp)/'engine.log','w+')
+ app=subprocess.Popen([binary,'--game','pinball'],env=env,stdout=log,stderr=log)
  def edge(sym,down):
   xt.XTestFakeKeyEvent(display,x.XKeysymToKeycode(display,sym),int(down),0);x.XFlush(display);time.sleep(.4)
  def capture(right=False):
@@ -44,7 +45,21 @@ with tempfile.TemporaryDirectory() as tmp:
   while not changed(neutral,capture()) and time.monotonic()<until:time.sleep(.2)
   assert changed(neutral,capture()),'Classic key failed after focus return'
   edge(ord('z'),False)
+  # Play through normal input under variable native frame timing. Each restart
+  # varies the bounce phase at which a fully charged launcher is released.
+  for phase in (.2,.45,.7):
+   key(0xffbf);time.sleep(phase)
+   edge(ord(' '),True);time.sleep(1.2);edge(ord(' '),False)
+   for _ in range(4):
+    edge(ord('z'),True);edge(ord('/'),True)
+    edge(ord('z'),False);edge(ord('/'),False)
   key(ord('q'),True);app.wait(timeout=10);assert app.returncode==0
+  log.flush();log.seek(0);trace=log.read()
+  assert 'NATIVE_GEOMETRY_CHECKS enabled' in trace, trace[-2500:]
+  assert 'NATIVE_GEOMETRY_FAILURE' not in trace, trace[-2500:]
+  contacts=[line.split() for line in trace.splitlines() if line.startswith('CONTACT ')]
+  assert any(float(c[5])<800 and c[2]!='plunger' for c in contacts),'Native launches did not reach the playfield'
+  log.close()
   print('PASS native classic aliases, overlap and focus recovery')
  finally:
   if app.poll() is None:app.terminate();app.wait(timeout=10)

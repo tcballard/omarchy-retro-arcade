@@ -309,9 +309,10 @@ void pb::frame(float dtMilliSec)
 	time_ticks_remainder = dtMilliSec - static_cast<float>(dtWhole);
 	time_ticks += dtWhole;
 
-	if (nudge::nudged_left || nudge::nudged_right || nudge::nudged_up)
+	if (OmarchyTable::Enabled ? nudge::held_inputs != 0 : (nudge::nudged_left || nudge::nudged_right || nudge::nudged_up))
 	{
-		nudge::nudge_count = dtSec * 4.0f + nudge::nudge_count;
+		const float buildupRate = OmarchyTable::Enabled ? 1.0f / nudge::CircuitTiltHoldSeconds : 4.0f;
+		nudge::nudge_count += dtSec * buildupRate;
 	}
 	else
 	{
@@ -457,7 +458,12 @@ void pb::timed_frame(float timeDelta)
 						break;
 					}
 
-					edge->EdgeCollision(ball, distance);
+                    const float contactSpeed=ball->Speed;
+                    edge->EdgeCollision(ball, distance);
+                    static const bool traceContacts=OmarchyTable::Enabled && getenv("OMARCHY_TRACE_CONTACTS");
+                    if(traceContacts)fprintf(stderr,"CONTACT %.4f %s %.3f %.3f %.3f %.3f\n",time_now,
+                        edge->CollisionComponent->GroupName?edge->CollisionComponent->GroupName:"unnamed",
+                        contactSpeed,ball->Speed,540+25*ball->Position.X,500+25*ball->Position.Y);
 					if (distance <= 0.0f || ball->CollisionDisabledFlag)
 						break;
 					distanceSum += distance;
@@ -487,6 +493,7 @@ void pb::timed_frame(float timeDelta)
 void pb::pause_continue()
 {
 	winmain::single_step ^= true;
+	if (OmarchyTable::Enabled && winmain::single_step) nudge::release_all();
 	InfoTextBox->Clear();
 	MissTextBox->Clear();
 	if (winmain::single_step)
@@ -525,6 +532,7 @@ void pb::pause_continue()
 
 void pb::loose_focus()
 {
+	if (OmarchyTable::Enabled) nudge::release_all();
 	if (MainTable)
 		MainTable->Message(MessageCode::LooseFocus, time_now);
 }
@@ -549,12 +557,15 @@ void pb::InputUp(GameInput input)
 			MainTable->Message(MessageCode::PlungerInputReleased, time_now);
 			break;
 		case GameBindings::LeftTableBump:
+			if (OmarchyTable::Enabled) nudge::held_inputs &= ~1u;
 			nudge::un_nudge_right(0, nullptr);
 			break;
 		case GameBindings::RightTableBump:
+			if (OmarchyTable::Enabled) nudge::held_inputs &= ~2u;
 			nudge::un_nudge_left(0, nullptr);
 			break;
 		case GameBindings::BottomTableBump:
+			if (OmarchyTable::Enabled) nudge::held_inputs &= ~4u;
 			nudge::un_nudge_up(0, nullptr);
 			break;
 		default: break;
@@ -601,16 +612,22 @@ void pb::InputDown(GameInput input)
 			MainTable->Message(MessageCode::PlungerInputPressed, time_now);
 			break;
 		case GameBindings::LeftTableBump:
-			if (!MainTable->TiltLockFlag)
+			if (!MainTable->TiltLockFlag) {
+				if (OmarchyTable::Enabled) nudge::held_inputs |= 1u;
 				nudge::nudge_right();
+			}
 			break;
 		case GameBindings::RightTableBump:
-			if (!MainTable->TiltLockFlag)
+			if (!MainTable->TiltLockFlag) {
+				if (OmarchyTable::Enabled) nudge::held_inputs |= 2u;
 				nudge::nudge_left();
+			}
 			break;
 		case GameBindings::BottomTableBump:
-			if (!MainTable->TiltLockFlag)
+			if (!MainTable->TiltLockFlag) {
+				if (OmarchyTable::Enabled) nudge::held_inputs |= 4u;
 				nudge::nudge_up();
+			}
 			break;
 		default: break;
 		}

@@ -14,18 +14,28 @@ namespace ArcadeBridge {
 static int output=-1;
 static std::string pending;
 static Uint32 last=0;
+static int width=1152,height=790;
+static SDL_Texture* surface=nullptr;
+static bool resizePending=false;
+static bool validSize(int w,int h){return w>=64&&h>=64&&w<=1600&&h<=1600&&w*h<=1000000;}
 bool Enabled(){return output>=0;}
 void Init(){
     fflush(stdout);output=dup(STDOUT_FILENO);dup2(STDERR_FILENO,STDOUT_FILENO);
     fcntl(STDIN_FILENO,F_SETFL,fcntl(STDIN_FILENO,F_GETFL)|O_NONBLOCK);
     signal(SIGPIPE,SIG_IGN);
-    SDL_setenv("SDL_VIDEODRIVER","dummy",1);
+    // Keep the worker windowless while allowing GPU rendering. SDL tries dummy
+    // when offscreen is unavailable; winmain retains its software renderer fallback.
+    SDL_setenv("SDL_VIDEODRIVER","offscreen,dummy",1);
 }
 static void quit(){SDL_Event e{SDL_QUIT};winmain::event_handler(&e);}
 static void command(const std::string& line){
     int a=0,b=0,c=0;
     SDL_Event e{};
     if(line=="quit"){quit();return;}
+    if(sscanf(line.c_str(),"resize %d %d",&a,&b)==2){
+        if(validSize(a,b)&&(a!=width||b!=height)){width=a;height=b;resizePending=true;}
+        return;
+    }
     if(line=="blur"){
         pb::loose_focus();winmain::pause(false);return;
     }
@@ -58,15 +68,29 @@ static bool send(const void* bytes,size_t size){
     while(size){ssize_t n=write(output,p,size);if(n<0&&errno==EINTR)continue;if(n<=0)return false;p+=n;size-=n;}
     return true;
 }
+// Render into a bounded texture rather than resizing an offscreen drawable:
+// some drivers retain the original drawable extent after SDL_SetWindowSize.
+bool BeginFrame(SDL_Renderer* renderer){
+    if(!Enabled())return true;
+    if(!surface||resizePending){
+        SDL_SetRenderTarget(renderer,nullptr);
+        if(surface)SDL_DestroyTexture(surface);
+        surface=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,SDL_TEXTUREACCESS_TARGET,width,height);
+        resizePending=false;
+    }
+    if(!surface||SDL_SetRenderTarget(renderer,surface)!=0){quit();return false;}
+    auto& io=ImGui::GetIO();io.DisplaySize=ImVec2(width,height);io.DisplayFramebufferScale=ImVec2(1,1);io.DeltaTime=1.f/60;
+    return true;
+}
+void Shutdown(){if(surface)SDL_DestroyTexture(surface);surface=nullptr;}
 void Present(SDL_Renderer* renderer){
     if(!Enabled()||SDL_GetTicks()-last<16)return;
     last=SDL_GetTicks();
-    int w=0,h=0;SDL_GetRendererOutputSize(renderer,&w,&h);
-    if(w!=1152||h!=790){quit();return;}
-    static std::vector<unsigned char> pixels(1152*790*4);
-    if(SDL_RenderReadPixels(renderer,nullptr,SDL_PIXELFORMAT_RGBA32,pixels.data(),w*4)!=0){quit();return;}
-    // Fixed little-endian header: magic + width + height. Host validates before allocation.
-    const unsigned char header[]={ 'O','A','R','1',0x80,0x04,0,0,0x16,0x03,0,0 };
+    static std::vector<unsigned char> pixels;
+    pixels.resize(static_cast<size_t>(width)*height*4);
+    if(SDL_RenderReadPixels(renderer,nullptr,SDL_PIXELFORMAT_RGBA32,pixels.data(),width*4)!=0){quit();return;}
+    unsigned char header[]={ 'O','A','R','1',0,0,0,0,0,0,0,0 };
+    for(int i=0;i<4;i++){header[4+i]=(width>>(8*i))&255;header[8+i]=(height>>(8*i))&255;}
     if(!send(header,sizeof(header))||!send(pixels.data(),pixels.size()))quit();
 }
 }

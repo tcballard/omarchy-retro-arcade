@@ -13,7 +13,8 @@ for shot in ("under_ramp", "on_ramp"):
             path = Path(tmp) / "frame.bmp"
             env = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy",
                        XDG_CONFIG_HOME=tmp, XDG_DATA_HOME=tmp, OMARCHY_TEST_TICKS="181",
-                       OMARCHY_TEST_SHOT=shot, OMARCHY_TEST_SCREENSHOT=str(path))
+                       OMARCHY_TEST_SHOT="custom",
+                       OMARCHY_TEST_VECTOR="350 40 0 1 0 "+("1" if shot=="under_ramp" else "2"), OMARCHY_TEST_SCREENSHOT=str(path))
             env.pop("OMARCHY_TEST_HIDE_BALL", None)
             if hidden:
                 env["OMARCHY_TEST_HIDE_BALL"] = "1"
