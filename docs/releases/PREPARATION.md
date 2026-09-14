@@ -1,5 +1,8 @@
 # Release preparation
 
+The refreshed candidate includes main through #38 (`26ab74c014c490af5112fc2fecd57604627d06d8`),
+including its high-score dialog and native paste regression checks.
+
 For v0.2.0, workspace and Arch versions advance together. No game rules, save
 schemas, imported version history or external dependency versions change.
 

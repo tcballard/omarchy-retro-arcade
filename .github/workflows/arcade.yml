@@ -32,8 +32,8 @@ jobs:
           node games/2048/upstream/test-game-logic.js
           node games/2048/verify-upstream.cjs
       - run: scripts/build.sh
-      - run: cmake --build build/pinball --target circuit-timing-tests -j2
-      - run: ctest --test-dir build/pinball --output-on-failure -R 'theme-palette|theme-path|authored-|arcade-|circuit-timing'
+      - run: cmake --build build/pinball --target circuit-timing-tests high-score-tests -j2
+      - run: ctest --test-dir build/pinball --output-on-failure -R 'theme-palette|theme-path|authored-|arcade-|circuit-timing|high-score-dialog'
       - run: desktop-file-validate packaging/omarchy-retro-arcade.desktop
       - name: Render every game and collection layout
         run: |
@@ -70,6 +70,7 @@ jobs:
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-blast.py target/release/omarchy-retro-arcade /tmp/arcade-renders/blast
       - name: Pinball controls, resize and native nudge lifecycle
         run: |
+          xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-pinball-names.py target/release/omarchy-retro-arcade
           xvfb-run -a -s '-screen 0 2400x1900x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-pinball-controls.py target/release/omarchy-retro-arcade /tmp/arcade-renders/pinball
           xvfb-run -a -s '-screen 0 2400x1900x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-pinball-resize.py target/release/omarchy-retro-arcade /tmp/arcade-renders/resize
           xvfb-run -a -s '-screen 0 2400x1900x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-nudge.py target/release/omarchy-retro-arcade /tmp/arcade-renders/nudge

@@ -28,6 +28,7 @@ public:
 private:
 	static bool dlg_enter_name;
 	static high_score_entry DlgData;
+	static high_score_struct EditData[5];
 	static bool ShowDialog;
 	static std::vector<high_score_entry> ScoreQueue;
 

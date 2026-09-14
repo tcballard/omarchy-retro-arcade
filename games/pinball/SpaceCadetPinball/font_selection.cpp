@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "font_selection.h"
+#include "ArcadeTextInput.h"
 
 #include "options.h"
 #include "pb.h"
@@ -33,7 +34,7 @@ void font_selection::RenderDialog()
 	{
 		ImGui::Text("Font file to use: ");
 		ImGui::SameLine();
-		ImGui::InputText("##Font", DialogInputBuffer, IM_ARRAYSIZE(DialogInputBuffer));
+		ArcadeTextInput::InputText("##Font", DialogInputBuffer, IM_ARRAYSIZE(DialogInputBuffer));
 
 		if (ImGui::Button(pb::get_rc_string(Msg::GenericOk)))
 		{
