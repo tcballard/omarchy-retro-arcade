@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "high_score.h"
+#include "ArcadeTextInput.h"
 
 #include "options.h"
 #include "pb.h"
@@ -180,7 +181,7 @@ void high_score::RenderHighScoreDialog()
 					{
 						ImGui::SetKeyboardFocusHere(0);
 					}
-					if (ImGui::InputText("", DlgData.Entry.Name, IM_ARRAYSIZE(DlgData.Entry.Name),
+					if (ArcadeTextInput::InputText("", DlgData.Entry.Name, IM_ARRAYSIZE(DlgData.Entry.Name),
 						ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
 					{
 						textBoxSubmit = true;
@@ -192,7 +193,7 @@ void high_score::RenderHighScoreDialog()
 					ImGui::SetNextItemWidth(200);
 					if (row == 0 && ImGui::IsWindowAppearing())
 						ImGui::SetKeyboardFocusHere();
-					textBoxSubmit |= ImGui::InputText("##name", EditData[row].Name,
+					textBoxSubmit |= ArcadeTextInput::InputText("##name", EditData[row].Name,
 						IM_ARRAYSIZE(EditData[row].Name), ImGuiInputTextFlags_EnterReturnsTrue);
 					ImGui::PopID();
 				}

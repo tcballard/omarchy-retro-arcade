@@ -1,6 +1,7 @@
 // Local, bounded pixel/input transport for the single-window Arcade host.
 #include "pch.h"
 #include "ArcadeBridge.h"
+#include "ArcadeTextInput.h"
 #include "winmain.h"
 #include "pb.h"
 #include "options.h"
@@ -17,6 +18,7 @@ static Uint32 last=0;
 static int width=1152,height=790;
 static SDL_Texture* surface=nullptr;
 static bool resizePending=false;
+static int pasteFrame=-1;
 static bool validSize(int w,int h){return w>=64&&h>=64&&w<=1600&&h<=1600&&w*h<=1000000;}
 bool Enabled(){return output>=0;}
 void Init(){
@@ -47,8 +49,10 @@ static void command(const std::string& line){
         io.AddKeyEvent(ImGuiMod_Alt,(a&KMOD_ALT)!=0);
         return;
     }
-    if(line.compare(0,5,"text ")==0){
-        const size_t length=line.size()-5;
+    const bool paste=line.compare(0,6,"paste ")==0;
+    if(paste||line.compare(0,5,"text ")==0){
+        const size_t start=paste?6:5;
+        const size_t length=line.size()-start;
         if(length==0 || length>2048 || length%2)return;
         auto hex=[](char ch)->int {
             if(ch>='0'&&ch<='9')return ch-'0';
@@ -56,7 +60,7 @@ static void command(const std::string& line){
             return -1;
         };
         std::string text;
-        for(size_t i=5;i<line.size();i+=2){
+        for(size_t i=start;i<line.size();i+=2){
             int hi=hex(line[i]),lo=hex(line[i+1]);
             if(hi<0||lo<0)return;
             unsigned char ch=static_cast<unsigned char>(hi*16+lo);
@@ -64,7 +68,10 @@ static void command(const std::string& line){
             text.push_back(static_cast<char>(ch));
         }
         auto& io=ImGui::GetIO();
-        if(io.WantTextInput)io.AddInputCharactersUTF8(text.c_str());
+        if(io.WantTextInput){
+            if(paste)ArcadeTextInput::Paste(text.c_str());
+            else io.AddInputCharactersUTF8(text.c_str());
+        }
         return;
     }
     int fields=sscanf(line.c_str(),"key %d %d %d %d",&a,&b,&c,&physical);
@@ -85,14 +92,23 @@ static void command(const std::string& line){
 }
 void Pump(){
     if(!Enabled())return;
+    // Paste runs in the active field's next callback. Keep it ordered with
+    // queued ImGui keys/text and with later bridge commands (including OK).
+    if(ImGui::GetFrameCount()<pasteFrame)return;
     char buffer[512];
     for(int i=0;i<16;++i){
+        size_t pos;
+        while((pos=pending.find('\n'))!=std::string::npos){
+            const bool paste=pending.compare(0,6,"paste ")==0;
+            if(paste&&!ImGui::GetCurrentContext()->InputEventsQueue.empty())return;
+            command(pending.substr(0,pos));pending.erase(0,pos+1);
+            if(paste){pasteFrame=ImGui::GetFrameCount()+1;return;}
+        }
         ssize_t n=read(STDIN_FILENO,buffer,sizeof(buffer));
         if(n==0){quit();return;}
         if(n<0){if(errno!=EAGAIN&&errno!=EWOULDBLOCK&&errno!=EINTR)quit();break;}
         pending.append(buffer,static_cast<size_t>(n));
         if(pending.size()>8192){quit();return;}
-        size_t pos;while((pos=pending.find('\n'))!=std::string::npos){command(pending.substr(0,pos));pending.erase(0,pos+1);}
     }
 }
 static bool send(const void* bytes,size_t size){

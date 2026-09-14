@@ -47,6 +47,7 @@ endforeach()
 
 set(SOURCE_FILES
         SpaceCadetPinball/ArcadeBridge.cpp
+        SpaceCadetPinball/ArcadeTextInput.cpp
         SpaceCadetPinball/CircuitView.cpp
         SpaceCadetPinball/OmarchyTable.cpp
         SpaceCadetPinball/OmarchyTheme.cpp
@@ -283,6 +284,7 @@ if(BUILD_TESTING)
 endif()
 if(BUILD_TESTING)
     add_executable(high-score-tests tests/high_score_test.cpp
+        SpaceCadetPinball/ArcadeTextInput.cpp
         SpaceCadetPinball/high_score.cpp SpaceCadetPinball/imgui.cpp
         SpaceCadetPinball/imgui_draw.cpp SpaceCadetPinball/imgui_tables.cpp
         SpaceCadetPinball/imgui_widgets.cpp)

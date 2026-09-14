@@ -145,7 +145,13 @@ shortcuts without changing the classic flipper aliases. Only deliver text when
 ImGui requests it. Existing score rows edit a temporary name buffer; OK or Enter
 commits names and the existing verification checksum immediately, while Cancel
 discards changes. Preserve scores, ordering, save paths and the 31-byte name format.
-Cover the real ImGui dialog and native host typing/save/restart in regression tests.
+Keep clipboard paste distinct from typing: replace the active field's selection
+through an ImGui text callback so held Ctrl cannot discard committed clipboard
+text. ImGui reconciles the edit with undo; truncate only at UTF-8 boundaries and
+retain the physical modifiers. Scope pending paste to the active field and next
+frame so it cannot leak to another dialog. Use the same path for the font field.
+Cover the real ImGui dialog and native host typing/save/restart in regression tests,
+including Ctrl+V over an existing name and saving before releasing Ctrl.
 
 ## Tanks engine foundation (issue #8)
 

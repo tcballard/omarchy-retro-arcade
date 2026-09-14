@@ -1,9 +1,24 @@
-"""Run under Xvfb: exercise actual host typing, score rename, save and restart."""
+"""Run under Xvfb: exercise host typing, Ctrl-held clipboard paste and restart."""
 from pathlib import Path
+import select
 
 # Reuse the collection's X11 input helpers, not its unrelated game test cases.
 exec(compile((Path(__file__).resolve().parent / 'native-check.py').read_text().split(
     'with tempfile.TemporaryDirectory')[0], 'native-input-helpers', 'exec'))
+
+# SDL serves the real X11 clipboard from a separate process, just as another
+# desktop app would. No clipboard utility or changes to the user's desktop.
+clipboard_source = r'''
+import ctypes as C, sys, time
+sdl = C.CDLL('libSDL2-2.0.so.0')
+sdl.SDL_SetClipboardText.argtypes = [C.c_char_p]
+assert sdl.SDL_Init(0x20) == 0
+assert sdl.SDL_SetClipboardText(sys.argv[1].encode()) == 0
+print('ready', flush=True)
+while True:
+    sdl.SDL_PumpEvents()
+    time.sleep(.01)
+'''
 
 with tempfile.TemporaryDirectory(prefix='arcade-name-test-') as tmp:
     env = dict(os.environ, XDG_DATA_HOME=tmp+'/data', XDG_CONFIG_HOME=tmp+'/config',
@@ -22,6 +37,16 @@ with tempfile.TemporaryDirectory(prefix='arcade-name-test-') as tmp:
 
     def snapshot():
         return dict(line.split('=',1) for line in saved.read_text().splitlines() if '=' in line)
+
+    def assert_saved(expected):
+        current=snapshot()
+        assert current['0.Name']==expected,current
+        assert current['1.Name']=='Runner up',current
+        assert [int(current[f'{i}.Score']) for i in range(5)]==scores,current
+        # The legacy checksum uses signed char bytes on the x86_64 CI builds.
+        checksum=sum(scores)+sum(byte if byte<128 else byte-256
+                                for i in range(5) for byte in current[f'{i}.Name'].encode())
+        assert int(current['Verification'])==checksum,current
 
     def open_game():
         app = subprocess.Popen([binary, '--game', 'pinball'], env=env)
@@ -44,8 +69,15 @@ with tempfile.TemporaryDirectory(prefix='arcade-name-test-') as tmp:
                             os.environ['ARCADE_NAMES_CAPTURE']+'.menu.png'],check=True)
         click(65,168);time.sleep(.3)
 
-    app,window=open_game()
+    pasted="Zoë O'Neil 7!"
+    clipboard=subprocess.Popen([sys.executable,'-u','-c',clipboard_source,pasted],
+                               env=dict(env,SDL_VIDEODRIVER='x11'),stdout=subprocess.PIPE,
+                               text=True)
+    app=None
     try:
+        assert select.select([clipboard.stdout],[],[],10)[0], 'Clipboard did not start'
+        assert clipboard.stdout.readline().strip()=='ready'
+        app,window=open_game()
         high_scores()
         if os.environ.get('ARCADE_NAMES_CAPTURE'):
             subprocess.run(['magick','import','-window',str(window),
@@ -66,6 +98,23 @@ with tempfile.TemporaryDirectory(prefix='arcade-name-test-') as tmp:
         assert [int(first[f'{i}.Score']) for i in range(5)]==scores
         key(ord('q'),True);app.wait(timeout=10);assert app.returncode==0
         app,window=open_game();high_scores()
+        # Select the existing name, paste via the host's real clipboard event,
+        # and save BEFORE releasing Ctrl. A deferred-until-release fix must fail.
+        ctrl=x.XKeysymToKeycode(display,0xffe3)
+        xt.XTestFakeKeyEvent(display,ctrl,1,0);x.XFlush(display)
+        try:
+            key(ord('a'))
+            key(ord('v'));time.sleep(.5)
+            click(405,522)  # OK, while Ctrl remains physically held.
+            assert_saved(pasted)
+        finally:
+            xt.XTestFakeKeyEvent(display,ctrl,0,0);x.XFlush(display)
+        key(ord('q'),True);app.wait(timeout=10);assert app.returncode==0
+        app,window=open_game();high_scores()
+        # Submit the name loaded by the restarted engine, not merely the file
+        # left by the previous process. This also exercises checksum validation.
+        key(0xff0d);assert_saved(pasted)
+        high_scores()
         if os.environ.get('ARCADE_NAMES_CAPTURE'):
             subprocess.run(['magick','import','-window',str(window),
                             os.environ['ARCADE_NAMES_CAPTURE']],check=True)
@@ -73,12 +122,10 @@ with tempfile.TemporaryDirectory(prefix='arcade-name-test-') as tmp:
         for ch in 'cancelled':key(ord(ch))
         click(460,522)  # Cancel in the fixture's fixed-position dialog.
         key(ord('q'),True);app.wait(timeout=10);assert app.returncode==0
-        second=snapshot()
-        assert second['0.Name']=='Riel St-AmAnd9',second
-        assert second['1.Name']=='Runner up'
-        assert [int(second[f'{i}.Score']) for i in range(5)]==scores
-        print('PASS native host typing, mixed case, spaces, punctuation, Backspace, Undo, rename, save/restart and Cancel')
+        assert_saved(pasted)
+        print('PASS native host typing, Backspace, Undo, Ctrl-held UTF-8 clipboard paste over an existing name, save before Ctrl release, restart, checksum, unchanged scores and Cancel')
     finally:
-        if app.poll() is None:
+        clipboard.kill();clipboard.wait(timeout=10)
+        if app is not None and app.poll() is None:
             app.terminate();app.wait(timeout=10)
 x.XCloseDisplay(display)

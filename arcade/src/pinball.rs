@@ -261,12 +261,17 @@ fn keycode(key: Key) -> Option<i32> {
 }
 // Text is distinct from gameplay key presses. Hex keeps UTF-8, spaces and
 // punctuation intact without allowing pasted newlines to become bridge commands.
-fn text_command(text: &str) -> Option<String> {
+fn text_command(event: &egui::Event) -> Option<String> {
+    let (operation, text) = match event {
+        egui::Event::Text(text) => ("text", text),
+        egui::Event::Paste(text) => ("paste", text),
+        _ => return None,
+    };
     let text: String = text.chars().filter(|c| !c.is_control()).take(256).collect();
     if text.is_empty() {
         return None;
     }
-    let mut command = String::from("text ");
+    let mut command = format!("{operation} ");
     for byte in text.bytes() {
         write!(command, "{byte:02x}").expect("writing to a string");
     }
@@ -368,8 +373,8 @@ impl eframe::App for Pinball {
                 ));
                 for event in ctx.input(|i| i.events.clone()) {
                     match event {
-                        egui::Event::Text(text) | egui::Event::Paste(text) => {
-                            if let Some(command) = text_command(&text) {
+                        egui::Event::Text(_) | egui::Event::Paste(_) => {
+                            if let Some(command) = text_command(&event) {
                                 self.send(command);
                             }
                         }
@@ -436,14 +441,21 @@ mod tests {
     #[test]
     fn names_preserve_utf8_and_cannot_inject_bridge_commands() {
         assert_eq!(
-            text_command("Riél O'Neil"),
+            text_command(&egui::Event::Text("Riél O'Neil".into())),
             Some("text 5269c3a96c204f274e65696c".into())
         );
-        assert_eq!(text_command("A\nquit\0"), Some("text 4171756974".into()));
-        assert_eq!(text_command("\n\0"), None);
         assert_eq!(
-            text_command(&"é".repeat(300)).unwrap(),
-            format!("text {}", "c3a9".repeat(256))
+            text_command(&egui::Event::Paste("Riél O'Neil".into())),
+            Some("paste 5269c3a96c204f274e65696c".into())
+        );
+        assert_eq!(
+            text_command(&egui::Event::Paste("A\nquit\0".into())),
+            Some("paste 4171756974".into())
+        );
+        assert_eq!(text_command(&egui::Event::Paste("\n\0".into())), None);
+        assert_eq!(
+            text_command(&egui::Event::Paste("é".repeat(300))).unwrap(),
+            format!("paste {}", "c3a9".repeat(256))
         );
         assert_eq!(physical_keycode(Key::Z), Some(122));
         assert_eq!(keycode(Key::Z), Some(97));
