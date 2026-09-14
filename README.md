@@ -14,14 +14,13 @@ A collection of classic games for Omarchy. Play pinball, cards, puzzles and arca
 
 Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048 · Shatter · Tanks
 
-**Development preview for x86_64 Omarchy.** The nine-game build passes native Linux and Arch installation checks. [Verification and remaining desktop playtesting](docs/VERIFICATION.md).
-
-2048, Shatter and Tanks are included when building this source revision. The older preview download below
-contains nine games and does **not** include 2048, Shatter or Tanks.
+**v0.2.0 release preparation for x86_64 Omarchy.** Twelve games, including
+2048, Shatter and Tanks. [Release notes and readiness](docs/releases/v0.2.0.md).
+The versioned package is being prepared; it has not been published yet.
 
 ## Install
 
-1. [Download the verified nine-game preview](https://github.com/tcballard/omarchy-retro-arcade/actions/runs/34690454743/artifacts/10296419019) from GitHub Actions. Sign in to GitHub if prompted.
+1. [Download the verified twelve-game development build](https://github.com/tcballard/omarchy-retro-arcade/actions/runs/34886679784/artifacts/10365483280) from GitHub Actions. Sign in to GitHub if prompted.
 2. Extract the ZIP and open a terminal in the extracted folder.
 3. Install the package:
 
@@ -31,14 +30,17 @@ sudo pacman -U ./omarchy-retro-arcade-[0-9]*.pkg.tar.zst
 
 Open **Omarchy Arcade** from your app launcher. Click a game and **Play**, or double-click its title. You can also select with the arrow keys and press `Enter`. Click **Arcade** (or press `Ctrl+H`) to return; **Full screen** and `F11` toggle fullscreen, and `Ctrl+Q` quits. See the [mouse controls and per-game input guide](docs/MOUSE-SUPPORT.md).
 
-The package includes all nine games and a bundled Stockfish engine for Chess. It replaces conflicting standalone game packages while retaining their existing save files and settings. The app works offline and needs no account.
+The package includes all twelve games and a bundled Stockfish engine for Chess. It replaces conflicting standalone game packages while retaining their existing save files and settings. The app works offline and needs no account.
 
-This is a tested development build from 12 September 2026, not a stable release or an official Omarchy package. The download supports **x86_64**; an ARM package is not available yet. GitHub's artifact expires on 11 December 2026. After that, use a newer successful build from [Actions](https://github.com/tcballard/omarchy-retro-arcade/actions/workflows/arcade.yml) or [build from source](#build).
+That download was built from `8d1d74d` on 14 September 2026 and still reports
+version 0.1.0. It is the tested baseline, not the forthcoming v0.2.0 package.
+It supports **x86_64**; no ARM package or live Omarchy/Wayland acceptance is claimed.
+GitHub Actions downloads expire; [current builds](https://github.com/tcballard/omarchy-retro-arcade/actions/workflows/arcade.yml)
+remain available separately from versioned releases.
 
-New builds provide separate `arch-package` (players), `arch-debug-symbols`
-(developers) and `corresponding-source-and-engine` downloads. Install only the
-player package; Stockfish is included for offline computer Chess. The older
-preview ZIP may contain both packages: the command above excludes debug symbols.
+Release preparation produces a `release-v0.2.0-x86_64` artifact with the player
+package, corresponding source, release notes, build identity and SHA-256 checksums.
+Install only the player package; debug symbols are optional and separate.
 See [player package contents](packaging/PLAYER.md).
 
 ## Build

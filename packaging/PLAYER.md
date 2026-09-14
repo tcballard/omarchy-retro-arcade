@@ -1,6 +1,6 @@
 # Omarchy Arcade — player package
 
-Eleven games in one native window, including a bundled Stockfish engine for
+Twelve games in one native window, including a bundled Stockfish engine for
 computer Chess. All games are available offline. No account is needed.
 
 Open Omarchy Arcade from the app launcher. Select a game and click Play, or

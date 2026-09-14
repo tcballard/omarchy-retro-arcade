@@ -107,7 +107,7 @@ jobs:
           printf 'uci\nisready\nquit\n' | timeout 15s /usr/libexec/omarchy-retro-arcade/stockfish | tee /tmp/stockfish-uci.txt
           grep -q '^uciok' /tmp/stockfish-uci.txt
           grep -q '^readyok' /tmp/stockfish-uci.txt
-          omarchy-retro-arcade --version
+          test "$(omarchy-retro-arcade --version)" = "Omarchy Arcade $(sed -n 's/^pkgver=//p' packaging/PKGBUILD)"
           test "$(pacman -Ql omarchy-retro-arcade | grep -c '/usr/share/applications/.*\.desktop$')" = 1
           su builder -c "cd '$GITHUB_WORKSPACE' && xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-check.py /usr/bin/omarchy-retro-arcade"
           su builder -c "cd '$GITHUB_WORKSPACE' && xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-blast.py /usr/bin/omarchy-retro-arcade"
@@ -116,6 +116,17 @@ jobs:
           pacman -U --noconfirm dist/arch/omarchy-retro-arcade-[0-9]*.pkg.tar.zst
           cmp /tmp/arcade-original.json /tmp/arcade-upgrade/omarchy-solitaire/session.json
           su builder -c 'xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 XDG_STATE_HOME=/tmp/arcade-upgrade omarchy-retro-arcade --game solitaire --screenshot /tmp/arcade-after.png'
+      - name: Prepare versioned release assets and checksums
+        id: release
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          packaging/prepare-release.sh
+          echo "version=$(sed -n 's/^pkgver=//p' packaging/PKGBUILD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-v${{ steps.release.outputs.version }}-x86_64
+          path: dist/release/v${{ steps.release.outputs.version }}/
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: arch-package
