@@ -21,9 +21,10 @@ enum Game {
     Blast,
     TwentyFortyEight,
     Shatter,
+    Tanks,
 }
 impl Game {
-    const ALL: [Self; 11] = [
+    const ALL: [Self; 12] = [
         Self::Pinball,
         Self::Solitaire,
         Self::Scram,
@@ -35,6 +36,7 @@ impl Game {
         Self::Blast,
         Self::TwentyFortyEight,
         Self::Shatter,
+        Self::Tanks,
     ];
     fn id(self) -> &'static str {
         match self {
@@ -48,6 +50,7 @@ impl Game {
             Self::Bubble => "bubble",
             Self::Blast => "blast",
             Self::TwentyFortyEight => "2048",
+            Self::Tanks => "tanks",
             Self::Shatter => "shatter",
         }
     }
@@ -63,6 +66,7 @@ impl Game {
             Self::Bubble => "Bubble",
             Self::Blast => "Blast",
             Self::TwentyFortyEight => "2048",
+            Self::Tanks => "Tanks",
             Self::Shatter => "Shatter",
         }
     }
@@ -78,6 +82,7 @@ impl Game {
             Self::Bubble => "Make three. Clear your head.",
             Self::Blast => "Make room. Leave an exit.",
             Self::TwentyFortyEight => "Slide together. Make something bigger.",
+            Self::Tanks => "Read the wind. Change the landscape.",
             Self::Shatter => "Find your angle. Break through.",
         }
     }
@@ -87,6 +92,7 @@ impl Game {
             Self::Snake => egui::include_image!("../../games/snake/docs/shelf.svg"),
             Self::Bubble => egui::include_image!("../../games/bubble/docs/game.png"),
             Self::Blast => egui::include_image!("../../games/blast/docs/game.png"),
+            Self::Tanks => egui::include_image!("../../games/tanks/shelf.svg"),
             Self::Shatter => egui::include_image!("../../games/shatter/docs/shelf.svg"),
             Self::TwentyFortyEight => egui::include_image!("../../games/2048/docs/shelf.svg"),
             Self::Chess => egui::include_image!("../../games/chess/docs/preview.png"),
@@ -142,6 +148,17 @@ impl ArcadeGame for omarchy_shatter::app::App {
     }
     fn finished(&mut self) -> bool {
         omarchy_shatter::app::App::finished(self)
+    }
+}
+impl ArcadeGame for omarchy_tanks::app::App {
+    fn suspend(&mut self) {
+        self.suspend();
+    }
+    fn set_input_enabled(&mut self, enabled: bool) {
+        self.set_input_enabled(enabled);
+    }
+    fn finished(&mut self) -> bool {
+        omarchy_tanks::app::App::finished(self)
     }
 }
 impl ArcadeGame for omarchy_2048::app::App {}
@@ -203,6 +220,7 @@ impl Arcade {
                 Game::Snake => Box::new(omarchy_snake::app::SnakeApp::new()),
                 Game::Bubble => Box::new(omarchy_bubble::app::BubbleApp::new()),
                 Game::Blast => Box::new(omarchy_blast::app::App::new()),
+                Game::Tanks => Box::new(omarchy_tanks::app::App::new()),
                 Game::Shatter => Box::new(omarchy_shatter::app::App::new()),
                 Game::TwentyFortyEight => Box::new(omarchy_2048::app::App::new()?),
                 Game::Chess => {
@@ -359,6 +377,7 @@ impl eframe::App for Arcade {
         if self.about {
             egui::Window::new("About Omarchy Arcade").open(&mut self.about).show(ctx,|ui|{
             ui.heading("Omarchy Arcade");ui.label(concat!("Version ",env!("CARGO_PKG_VERSION")));ui.label("Native games. A community project for Omarchy.");
+            ui.label("Tanks: original Arcade artillery game. Preview; original synthesized sound.");
             ui.label("Shatter: original Arcade game, layouts and synthesized audio.");
             ui.hyperlink_to("2048: Avi Barit (avibarit)", "https://github.com/avibarit/2048");
             ui.hyperlink_to("Original 2048: Gabriele Cirulli", "https://github.com/gabrielecirulli/2048");
@@ -417,7 +436,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
             "--help" | "-h" => {
-                println!("Omarchy Arcade\n--game chess|solitaire|scram|invaders|pinball|stack|snake|bubble|blast|2048|shatter\n--screenshot PATH\n--compact\n--version\nCtrl+H: return to Arcade. Ctrl+Q: quit.");
+                println!("Omarchy Arcade\n--game chess|solitaire|scram|invaders|pinball|stack|snake|bubble|blast|2048|shatter|tanks\n--screenshot PATH\n--compact\n--version\nCtrl+H: return to Arcade. Ctrl+Q: quit.");
                 return Ok(());
             }
             "--game" => {

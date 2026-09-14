@@ -2663,6 +2663,7 @@ dependencies = [
  "omarchy-snake",
  "omarchy-solitaire",
  "omarchy-stack",
+ "omarchy-tanks",
  "tempfile",
 ]
 
@@ -2730,6 +2731,18 @@ dependencies = [
  "arcade-leaderboard",
  "arcade-presentation",
  "chrono",
+ "eframe",
+ "omarchy-chess",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "omarchy-tanks"
+version = "0.1.0"
+dependencies = [
+ "arcade-presentation",
  "eframe",
  "omarchy-chess",
  "serde",

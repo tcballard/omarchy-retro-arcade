@@ -2,7 +2,9 @@
 
 [![Built for Omarchy](https://raw.githubusercontent.com/tcballard/omarchy-badges/85f859029e236e784e7b05ada6dbe73506d07a91/badges/v1/built-for-omarchy.svg)](https://github.com/tcballard/omarchy-badges)
 
-**Eleven games. One native app. One more go.**
+<a href="https://github.com/tcballard/omarchy-badges"><img src="https://raw.githubusercontent.com/tcballard/omarchy-badges/75975e5b5bf75e7ede3764bcd2950046f7abfe2c/badges/v1/omarchy-app.svg" height="20" alt="Omarchy App community badge"></a>
+
+**Twelve games. One native app. One more go.**
 
 A collection of classic games for Omarchy. Play pinball, cards, puzzles and arcade games in one native window, with offline play, local saves and an interface that follows your desktop theme.
 
@@ -10,12 +12,12 @@ A collection of classic games for Omarchy. Play pinball, cards, puzzles and arca
 
 ![Omarchy Arcade's opening collection, with a full Pinball preview and all nine games in the selector](docs/polish/shelf.png)
 
-Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048 · Shatter
+Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048 · Shatter · Tanks
 
 **Development preview for x86_64 Omarchy.** The nine-game build passes native Linux and Arch installation checks. [Verification and remaining desktop playtesting](docs/VERIFICATION.md).
 
-2048 and Shatter are included when building this source revision. The older preview download below
-contains nine games and does **not** include 2048 or Shatter.
+2048, Shatter and Tanks are included when building this source revision. The older preview download below
+contains nine games and does **not** include 2048, Shatter or Tanks.
 
 ## Install
 
@@ -81,7 +83,7 @@ PRs, issues and playtesting are encouraged. [Report a bug, suggest an improvemen
 ## Source layout
 
 - `arcade/`: the Rust app, collection shelf and local Pinball transport.
-- `games/`: eleven ordinary game directories, preserving all imported Git history.
+- `games/`: twelve ordinary game directories, preserving all imported Git history.
 - `packaging/`: one Arch package, icon and desktop entry.
 - `scripts/`: shared build, staging and verification entry points.
 - `shared/presentation/`: shared cabinet materials, control styling and artwork.
@@ -101,3 +103,5 @@ Stack includes offline Marathon and 40-line Sprint, local records and exact resu
 2048 is adapted from [Avi Barit (avibarit)](https://github.com/avibarit/2048), with permission reported by Tom Ballard. Original 2048 by [Gabriele Cirulli](https://github.com/gabrielecirulli/2048). [Controls, saves and credits](games/2048/README.md).
 
 Shatter is an original brick breaker: 20 authored levels, mouse/keyboard play, three power-ups, campaign saves and unlocked-level practice. [Controls and verification](games/shatter/README.md). Hands-on Omarchy acceptance is pending.
+
+Tanks is an artillery preview with solo Easy/Normal AI, local two-player matches, destructible hills and resumable matches. [Controls and current limitations](games/tanks/HELP.md). Includes original sound cues, animated impacts and settling, aiming aids and reduced effects. Hands-on Omarchy acceptance remains pending; [polish verification](games/tanks/VERIFICATION.md).

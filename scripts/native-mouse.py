@@ -52,7 +52,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-mouse-') as tmp:
         rail_w = min(350, max(240, (w-48-pad*2)*.32))
         bottom = h - 32 - 46
         top = 144
-        games = ['Circuit Pinball','Solitaire','Scram','Invaders','Chess','Stack','Snake','Bubble','Blast','2048','Shatter']
+        games = ['Circuit Pinball','Solitaire','Scram','Invaders','Chess','Stack','Snake','Bubble','Blast','2048','Shatter','Tanks']
         def select(index):
             mouse(right-rail_w/2, top+(index+.5)*(bottom-top)/len(games))
         def play(name):

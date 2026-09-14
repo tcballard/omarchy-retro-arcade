@@ -146,3 +146,55 @@ ImGui requests it. Existing score rows edit a temporary name buffer; OK or Enter
 commits names and the existing verification checksum immediately, while Cancel
 discards changes. Preserve scores, ordering, save paths and the 31-byte name format.
 Cover the real ImGui dialog and native host typing/save/restart in regression tests.
+
+## Tanks engine foundation (issue #8)
+
+- Start Tanks as a dependency-free, UI-independent Rust workspace library under
+  `games/tanks`. This engine milestone does not add a shelf placeholder or change
+  the native application, existing games, approved assets, saves or package payload.
+- Use a 120 Hz simulation, piecewise linear heightfield and swept point-projectile
+  contacts. Resolve blast damage from one snapshot, then crater/settle both tanks
+  and award the result once. Explicit Ready and RoundOver states let the later
+  frontend implement safe handover and draw acknowledgement.
+- Preview rules, support geometry, damage rounding and numeric tuning are recorded
+  in `games/tanks/README.md`. Values remain provisional until recorded playtesting.
+  Cloned simulation state is not yet a disk persistence contract. AI, native UI,
+  storage, audio and Omarchy acceptance remain subsequent slices of issue #8.
+
+### Tanks playable preview
+
+- Append Tanks as the twelfth shelf entry using the existing ArcadeGame lifecycle,
+  theme loader and cabinet presentation. Native geometry, labelled numerical aim,
+  explicit fire and turn handover support mouse and keyboard in one window.
+- Easy/Normal AI incrementally evaluates ordinary engine shots. Normal also tries
+  limited repositioning; both compare limited weapons and penalise self-damage.
+  Work has a fixed per-call tick/candidate budget. Pausing discards search; resuming
+  reconstructs it from the saved visible match and dedicated AI seed, preserving
+  the eventual choice without accessing future terrain randomness.
+- Versioned tanks.json uses bounded validated reads and shared atomic private
+  writes, with exact projectile/RNG/trace state. Rejected saves disable writes until
+  explicit unique archival succeeds. Match records and preferences are logically
+  separate from active match state. Reopening always pauses.
+- This is a silent playable preview. Effects, original audio, visual refinement
+  and hands-on benchmark comparison remain open; reduced-effects preference is
+  reserved for upcoming animation. Headless checks do not establish Omarchy feel.
+
+## Tanks impact and control polish
+
+- Keep damage resolution in the deterministic engine. `tick_event` returns an
+  immutable pre-impact snapshot and actual blast/fall damage; the frontend saves
+  a separate 108-tick presentation. Pause, shelf, close and reopen retain exact
+  settling progress. No commands or AI advance until presentation completes.
+- Reduced effects uses final positions with static feedback, preserving the same
+  rules and turn delay. Effects use stable visual noise, never the engine RNG.
+- Original bounded synthesized PCM cues use an owned, reaped paplay process.
+  Mute, pause, focus loss and shelf exit stop playback. Missing or failed audio
+  is nonfatal and reported in Settings. No new package dependency is introduced
+  (the Arch package already includes libpulse).
+- Fresh installs choose Solo Easy, Solo Normal or Local. Optional saved fields
+  preserve old preview matches. Held aiming is time-based; explicit Fire and
+  release-to-rearm prevent handover inputs from becoming accidental shots.
+- Add original layered terrain, track details, aiming arcs, a wind flag, recoil,
+  flashes, weapon-specific impacts and damage labels. Native X11 renders are
+  inspected at dark/light, compact and 200%; this does not establish Omarchy
+  Wayland acceptance or competitive balance against the gameplay benchmark.

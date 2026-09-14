@@ -144,6 +144,8 @@ with tempfile.TemporaryDirectory(prefix='arcade-native-') as tmp:
         assert (state/'omarchy-retro-arcade/2048.json').is_file()
         key(0xff53);enter('Shatter');home()
         assert (state/'omarchy-retro-arcade/shatter.json').is_file()
+        key(0xff53);enter('Tanks');home()
+        assert (state/'omarchy-retro-arcade/tanks.json').is_file()
         key(0xff53);enter('Circuit Pinball');time.sleep(.7)
         assert windows()==[window],windows()
         key(0x20,hold=.6);key(ord('a'),hold=.2);key(ord('d'),hold=.2)
@@ -156,7 +158,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-native-') as tmp:
         # Close from the app-level shortcut.
         key(ord('q'),True);app.wait(timeout=8);assert app.returncode==0
         assert json.loads(save.read_text())['game']==first['game']
-        print('PASS: singleton; one window across eleven games; Solitaire draw/save/reopen; legacy save paths; Stockfish replies to native move; native keys; clean shutdown.')
+        print('PASS: singleton; one window across twelve games; Solitaire draw/save/reopen; legacy save paths; Stockfish replies to native move; native keys; clean shutdown.')
     finally:
         if app.poll() is None:app.kill();app.wait()
 x.XCloseDisplay(display)

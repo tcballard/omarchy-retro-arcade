@@ -9,7 +9,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-polish-') as tmp:
  env=dict(os.environ,XDG_STATE_HOME=tmp+'/state',XDG_CONFIG_HOME=tmp+'/config',XDG_DATA_HOME=tmp+'/data',WINIT_X11_SCALE_FACTOR=str(scale))
  if variant=='light':
   t=Path(tmp)/'state/omarchy/current/theme/colors.toml';t.parent.mkdir(parents=True);t.write_text('background = "#f3f0e7"\nforeground = "#262b24"\naccent = "#526f3a"\n')
- for game in ['shelf','pinball','solitaire','scram','invaders','chess','stack','snake','bubble','blast','2048','shatter']:
+ for game in ['shelf','pinball','solitaire','scram','invaders','chess','stack','snake','bubble','blast','2048','shatter','tanks']:
   args=[binary]+([] if game=='shelf' else ['--game',game])+(['--compact'] if variant in ['compact','200'] else [])
   app=subprocess.Popen(args,env=env)
   try:

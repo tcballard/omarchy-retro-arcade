@@ -15,6 +15,7 @@ impl Game {
             Self::Bubble => "PUZZLE / 20 LEVELS",
             Self::Blast => "ARENA / SOLO + LOCAL",
             Self::TwentyFortyEight => "PUZZLE / 2048",
+            Self::Tanks => "ARTILLERY / SOLO + LOCAL",
             Self::Shatter => "ARCADE / BRICK BREAKER",
         }
     }
@@ -30,6 +31,7 @@ impl Game {
             Self::Bubble => ([0.30, 0.10], [0.73, 0.93]),
             Self::Blast => ([0.07, 0.13], [0.93, 0.96]),
             Self::TwentyFortyEight => ([0., 0.], [1., 1.]),
+            Self::Tanks => ([0., 0.], [1., 1.]),
             Self::Shatter => ([0., 0.], [1., 1.]),
         };
         Rect::from_min_max(Pos2::from(a), Pos2::from(b))
