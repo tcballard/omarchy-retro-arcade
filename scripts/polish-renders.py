@@ -9,7 +9,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-polish-') as tmp:
  env=dict(os.environ,XDG_STATE_HOME=tmp+'/state',XDG_CONFIG_HOME=tmp+'/config',XDG_DATA_HOME=tmp+'/data',WINIT_X11_SCALE_FACTOR=str(scale))
  if variant=='light':
   t=Path(tmp)/'state/omarchy/current/theme/colors.toml';t.parent.mkdir(parents=True);t.write_text('background = "#f3f0e7"\nforeground = "#262b24"\naccent = "#526f3a"\n')
- for game in ['shelf','pinball','solitaire','scram','invaders','chess','stack','snake','bubble','blast','2048','shatter','tanks']:
+ for game in ['shelf','pinball','solitaire','scram','invaders','chess','stack','snake','bubble','blast','2048','shatter','tanks','freeski']:
   args=[binary]+([] if game=='shelf' else ['--game',game])+(['--compact'] if variant in ['compact','200'] else [])
   app=subprocess.Popen(args,env=env)
   try:
@@ -23,6 +23,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-polish-') as tmp:
     key(0xff0d);key(0xff51,hold=.3);key(0x20);key(0xff53,hold=.3);key(0x20);key(ord('c'));key(0xff52)
    elif game=='snake': key(ord('1'));key(0xff0d);key(0xff52,hold=.02)
    elif game in ['bubble','blast']: key(0xff0d)
+   elif game=='freeski': key(0xff0d);time.sleep(5.)
    elif game=='scram':key(0xff53,hold=.25)
    elif game=='invaders':key(ord('p'));key(0x20,hold=.2)
    elif game=='pinball':key(0x20,hold=.5);time.sleep(2.)

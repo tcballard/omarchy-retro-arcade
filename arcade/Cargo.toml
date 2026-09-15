@@ -22,6 +22,8 @@ omarchy-bubble = { path = "../games/bubble" }
 
 omarchy-2048 = { path = "../games/2048" }
 
+omarchy-freeski = { path = "../games/freeski" }
+
 omarchy-shatter = { path = "../games/shatter" }
 
 omarchy-tanks = { path = "../games/tanks", features = ["desktop"] }

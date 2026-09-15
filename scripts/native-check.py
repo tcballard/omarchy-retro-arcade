@@ -75,6 +75,11 @@ def click(px,py):
 
 with tempfile.TemporaryDirectory(prefix='arcade-native-') as tmp:
     state=Path(tmp)/'state'
+    # Pin the palette used by the board-pixel assertions. Theme::load otherwise
+    # falls back to the real user's Omarchy theme even with isolated XDG paths.
+    theme=state/'omarchy/current/theme/colors.toml'
+    theme.parent.mkdir(parents=True)
+    theme.write_text('background = "#171c1a"\nforeground = "#e4e8df"\naccent = "#b3cb92"\n')
     env=dict(os.environ,XDG_STATE_HOME=str(state),XDG_CONFIG_HOME=tmp+'/config',XDG_DATA_HOME=tmp+'/data')
     app=subprocess.Popen([binary]+(['--compact'] if os.environ.get('ARCADE_TEST_COMPACT')=='1' else []),env=env)
     try:
@@ -146,6 +151,8 @@ with tempfile.TemporaryDirectory(prefix='arcade-native-') as tmp:
         assert (state/'omarchy-retro-arcade/shatter.json').is_file()
         key(0xff53);enter('Tanks');home()
         assert (state/'omarchy-retro-arcade/tanks.json').is_file()
+        key(0xff53);enter('FreeSki');key(0xff0d);home()
+        assert (state/'omarchy-retro-arcade/freeski.json').is_file()
         key(0xff53);enter('Circuit Pinball');time.sleep(.7)
         assert windows()==[window],windows()
         key(0x20,hold=.6);key(ord('a'),hold=.2);key(ord('d'),hold=.2)
@@ -158,7 +165,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-native-') as tmp:
         # Close from the app-level shortcut.
         key(ord('q'),True);app.wait(timeout=8);assert app.returncode==0
         assert json.loads(save.read_text())['game']==first['game']
-        print('PASS: singleton; one window across twelve games; Solitaire draw/save/reopen; legacy save paths; Stockfish replies to native move; native keys; clean shutdown.')
+        print('PASS: singleton; one window across thirteen games; Solitaire draw/save/reopen; legacy save paths; Stockfish replies to native move; native keys; clean shutdown.')
     finally:
         if app.poll() is None:app.kill();app.wait()
 x.XCloseDisplay(display)

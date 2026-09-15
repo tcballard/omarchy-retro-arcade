@@ -2631,6 +2631,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "omarchy-freeski"
+version = "0.2.0"
+dependencies = [
+ "arcade-presentation",
+ "eframe",
+ "omarchy-chess",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "omarchy-invaders"
 version = "0.2.0"
 dependencies = [
@@ -2657,6 +2669,7 @@ dependencies = [
  "omarchy-blast",
  "omarchy-bubble",
  "omarchy-chess",
+ "omarchy-freeski",
  "omarchy-invaders",
  "omarchy-scram",
  "omarchy-shatter",

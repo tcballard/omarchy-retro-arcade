@@ -15,6 +15,7 @@ impl Game {
             Self::Bubble => "PUZZLE / 20 LEVELS",
             Self::Blast => "ARENA / SOLO + LOCAL",
             Self::TwentyFortyEight => "PUZZLE / 2048",
+            Self::FreeSki => "SPORT / DOWNHILL SKIING",
             Self::Tanks => "ARTILLERY / SOLO + LOCAL",
             Self::Shatter => "ARCADE / BRICK BREAKER",
         }
@@ -31,6 +32,8 @@ impl Game {
             Self::Bubble => ([0.30, 0.10], [0.73, 0.93]),
             Self::Blast => ([0.07, 0.13], [0.93, 0.96]),
             Self::TwentyFortyEight => ([0., 0.], [1., 1.]),
+            // Native 1280×900 capture: frame the chase and the approaching terrain.
+            Self::FreeSki => ([316. / 1280., 206. / 900.], [964. / 1280., 656. / 900.]),
             Self::Tanks => ([0., 0.], [1., 1.]),
             Self::Shatter => ([0., 0.], [1., 1.]),
         };

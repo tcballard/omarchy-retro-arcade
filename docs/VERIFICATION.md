@@ -1,5 +1,29 @@
 # Arcade verification
 
+## FreeSki integration — 15 September 2026
+
+Merged main `5d5c085` while preserving all thirteen games and the lean package.
+Combined workspace checks, native switching and the actual system package
+upgrade passed. Existing saves survived installation and native Wayland reopen.
+[Current FreeSki evidence](../games/freeski/docs/VERIFICATION.md#2026-09-15-integrated-package-and-review-readiness)
+separates current checks, CI status and Tyler's recorded human acceptance.
+The dated reports below describe their original revisions.
+
+## FreeSki complete local modes — 13 September 2026
+
+FreeSki is the eleventh game in the source build. The completion pass implements
+practice, seeded endless terrain, optional creature pursuit, five Slalom courses,
+medals, original sound and resumable state. Native dark/light/compact/200% checks,
+eleven-game switching and staged pursuit/Slalom upgrade cases passed. The actual
+Wayland launch retained the user's existing schema-2 run and its original bytes.
+A user-local Arch package build passed its 288 tests and all engine checks; the
+extracted package passed native switching, FreeSki flows and save re-extraction.
+This is separate from installing it into the system pacman database.
+
+[FreeSki verification](../games/freeski/docs/VERIFICATION.md) records source
+revisions, exact checks, package results and remaining human difficulty acceptance.
+The older nine-game preview release below is unchanged.
+
 ## Nine-game presentation integration — 12 September 2026
 
 The integrated presentation revision passed all 197 workspace tests, strict Clippy, formatting, the release build, three Pinball engine/theme tests and desktop-entry validation. The local staged installation also contains the nine game licenses and cabinet-art provenance.

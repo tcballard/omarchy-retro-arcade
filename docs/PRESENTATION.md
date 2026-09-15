@@ -53,3 +53,16 @@ Captured from the native executable at revision `4e7da43023191548a410c50e09e7947
 | Blast | [Open screenshot](polish/blast.png) |
 
 [Light collection](polish/shelf-light.png) · [Compact collection](polish/shelf-compact.png)
+
+## FreeSki complete local modes
+
+FreeSki joins the thirteen-game source build with original snowy terrain, skier,
+gates and a shaggy yeti inside the existing cabinet. It offers Practice,
+endless Free Ski with optional pursuit, and the five-course Slalom Cup. Original
+synthesized cues accompany visible outcomes; mute and reduced effects are saved.
+
+The linked committed captures below the historical report document the initial
+practice build. The completion report identifies later dark/light/compact/200%
+captures, live pursuit art, course results and exact suspended-run restoration.
+[Actual app captures and acceptance notes](../games/freeski/docs/VERIFICATION.md).
+[Acceptance and review status](../games/freeski/docs/NEXT.md).

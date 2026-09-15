@@ -27,6 +27,10 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --locked --all-targets -- -D warnings
       - run: REQUIRE_STOCKFISH=1 cargo test --workspace --locked --all-targets
+      - run: cargo test -p omarchy-freeski --locked --no-default-features
+      - run: cargo run -p omarchy-freeski --locked --no-default-features --example practice-evidence -- /tmp/freeski-fixtures
+      - run: cargo run -p omarchy-freeski --locked --no-default-features --example endless-evidence -- /tmp/freeski-fixtures
+      - run: cargo run -p omarchy-freeski --locked --no-default-features --example completion-evidence -- /tmp/freeski-fixtures
       - name: 2048 upstream rules and parity
         run: |
           node games/2048/upstream/test-game-logic.js
@@ -46,8 +50,13 @@ jobs:
         with:
           name: polish-review
           path: /tmp/arcade-polish/
-      - name: One window, twelve games, existing saves
+      - name: One window, thirteen games, existing saves
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-check.py target/release/omarchy-retro-arcade
+      - name: FreeSki controls, suspended runs and layouts
+        run: |
+          for variant in dark light compact 200; do
+            xvfb-run -a -s '-screen 0 2400x1900x24' env LIBGL_ALWAYS_SOFTWARE=1 FREESKI_FIXTURES=/tmp/freeski-fixtures python3 scripts/native-freeski.py target/release/omarchy-retro-arcade /tmp/arcade-renders/freeski/$variant "$variant"
+          done
       - name: Tanks controls, exact resume and save protection
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-tanks.py target/release/omarchy-retro-arcade
       - name: Shatter controls, exact resume and save protection
@@ -58,6 +67,7 @@ jobs:
           xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy ARCADE_TEST_COMPACT=1 python3 -B scripts/native-mouse.py target/release/omarchy-retro-arcade /tmp/arcade-renders/mouse/compact
           xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy ARCADE_TEST_LIGHT=1 python3 -B scripts/native-mouse.py target/release/omarchy-retro-arcade /tmp/arcade-renders/mouse/light
           xvfb-run -a -s '-screen 0 2400x1900x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy ARCADE_TEST_COMPACT=1 WINIT_X11_SCALE_FACTOR=2 python3 -B scripts/native-mouse.py target/release/omarchy-retro-arcade /tmp/arcade-renders/mouse/200
+
       - name: 2048 controls, saves and credits
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-2048.py target/release/omarchy-retro-arcade /tmp/arcade-renders/2048
       - name: Stack keyboard, pause, focus and saves
@@ -77,7 +87,8 @@ jobs:
       - name: Capture the actual app
         run: |
           mkdir -p /tmp/arcade-renders
-          for game in chess solitaire scram invaders pinball stack snake bubble blast 2048 shatter tanks; do
+          for game in chess solitaire scram invaders pinball stack snake bubble blast 2048 shatter tanks freeski; do
+
             xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy XDG_STATE_HOME=/tmp/arcade-$game/state XDG_DATA_HOME=/tmp/arcade-$game/data XDG_CONFIG_HOME=/tmp/arcade-$game/config target/release/omarchy-retro-arcade --game "$game" --screenshot "/tmp/arcade-renders/$game.png"
           done
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 target/release/omarchy-retro-arcade --compact --screenshot /tmp/arcade-renders/shelf-compact.png
@@ -97,6 +108,12 @@ jobs:
           useradd -m builder
           chown -R builder:builder "$GITHUB_WORKSPACE"
           su builder -c "cd '$GITHUB_WORKSPACE' && packaging/build-arch.sh"
+      - name: FreeSki suspended-run fixtures
+        run: su builder -c "cd '$GITHUB_WORKSPACE' && cargo run -p omarchy-freeski --locked --no-default-features --example practice-evidence -- /tmp/freeski-fixtures"
+      - name: Endless Free Ski suspended-run fixtures
+        run: su builder -c "cd '$GITHUB_WORKSPACE' && cargo run -p omarchy-freeski --locked --no-default-features --example endless-evidence -- /tmp/freeski-fixtures"
+      - name: Pursuit and Slalom suspended-run fixtures
+        run: su builder -c "cd '$GITHUB_WORKSPACE' && cargo run -p omarchy-freeski --locked --no-default-features --example completion-evidence -- /tmp/freeski-fixtures"
       - name: Install and verify
         run: |
           pacman -U --noconfirm dist/arch/omarchy-retro-arcade-[0-9]*.pkg.tar.zst
@@ -114,8 +131,18 @@ jobs:
           su builder -c "cd '$GITHUB_WORKSPACE' && xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-blast.py /usr/bin/omarchy-retro-arcade"
           su builder -c 'xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 XDG_STATE_HOME=/tmp/arcade-upgrade omarchy-retro-arcade --game solitaire --screenshot /tmp/arcade-before.png'
           cp /tmp/arcade-upgrade/omarchy-solitaire/session.json /tmp/arcade-original.json
+          su builder -c "cd '$GITHUB_WORKSPACE' && xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 FREESKI_FIXTURES=/tmp/freeski-fixtures python3 scripts/native-freeski.py /usr/bin/omarchy-retro-arcade /tmp/freeski-installed"
+          mkdir -p /tmp/arcade-upgrade/omarchy-retro-arcade
+          cp /tmp/freeski-fixtures/chase-active.json /tmp/arcade-upgrade/omarchy-retro-arcade/freeski.json
+          chown -R builder:builder /tmp/arcade-upgrade
+          su builder -c 'xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 XDG_STATE_HOME=/tmp/arcade-upgrade omarchy-retro-arcade --game freeski --screenshot /tmp/freeski-before.png'
+          cp /tmp/arcade-upgrade/omarchy-retro-arcade/freeski.json /tmp/freeski-original.json
           pacman -U --noconfirm dist/arch/omarchy-retro-arcade-[0-9]*.pkg.tar.zst
+
           cmp /tmp/arcade-original.json /tmp/arcade-upgrade/omarchy-solitaire/session.json
+          cmp /tmp/freeski-original.json /tmp/arcade-upgrade/omarchy-retro-arcade/freeski.json
+          su builder -c 'xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 XDG_STATE_HOME=/tmp/arcade-upgrade omarchy-retro-arcade --game freeski --screenshot /tmp/freeski-after.png'
+          cmp /tmp/freeski-original.json /tmp/arcade-upgrade/omarchy-retro-arcade/freeski.json
           su builder -c 'xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 XDG_STATE_HOME=/tmp/arcade-upgrade omarchy-retro-arcade --game solitaire --screenshot /tmp/arcade-after.png'
       - name: Prepare versioned release assets and checksums
         id: release

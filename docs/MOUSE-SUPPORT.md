@@ -21,8 +21,9 @@ Each game keeps its own settings and help. There is no new shared settings store
 | Stack | Falling-block gameplay remains keyboard-controlled | Mode selection, new/resume saved run, pause/resume, restart, preferences/control bindings, return. |
 | Snake | Directional gameplay remains keyboard-controlled | Speed/start, pause/resume, restart, Settings/control bindings, return. |
 | Blast | Movement/bombs remain keyboard-controlled, including local two-player | Match/arena selection, start, Settings/controls, pause/resume, restart, next round, return. |
-
 | 2048 | Click direction buttons or drag across the board | New game, undo, pause/resume, Help, preferences and continue after reaching 2048. |
+
+| FreeSki | Move over the snow to steer; right mouse brakes | Start, mode/course selection, fast mode, brake, pause/resume, Settings and Help. |
 
 The shared actions are mouse-accessible; this is not a promise that every game is entirely mouse-playable. Rebinding a keyboard control still requires pressing the replacement key. Future games should provide suitable mouse gameplay and clickable common actions from the outset.
 
@@ -36,7 +37,7 @@ Pointer input is confined to the Invaders playfield and disabled while paused, u
 
 Automated egui input tests and X11 native checks are separate from an actual Omarchy/Wayland playtest. Before closing #6, verify on Omarchy:
 
-- All ten games can be selected, launched and left using the mouse; Pinball can both cancel and confirm returning.
+- All thirteen games can be selected, launched and left using the mouse; Pinball can both cancel and confirm returning.
 - Applicable settings/help, pause/resume, restart and new-game actions work with clicks.
 - Chess, Solitaire, Bubble, Invaders and 2048 accept the documented pointer gameplay.
 - Opening/closing menus and dialogs cannot also play a move, fire a shot or activate a worker menu underneath.
