@@ -30,3 +30,17 @@ The focused suite checks all difficulties and corner/edge/central openings (480 
 The initial dependency compilation failed while building a zbus archive; a two-job rebuild completed. Compile/lint findings in the new game were corrected before the passing checks above.
 
 This is a development handoff, not a versioned release or desktop-compatibility claim. No game audio or online service is added. The shelf SVG is an original illustration, not a screenshot.
+
+## Visual and desktop-theme pass — 2026-09-16
+
+The refreshed `verification.sha256` identifies this pass. Earlier checks above are historical at b3ef347; they are not reruns against this revision. Reproduced on Ubuntu 24.04.3 / Rust 1.98.1:
+
+- `cargo test -p omarchy-minesweeper --locked -j 2`: exit 0, 14 tests. Added palette precedence, retention and text-contrast checks.
+- `cargo fmt --all --check`, workspace Clippy with `-D warnings`, and shared Arcade debug build: exit 0.
+- `scripts/native-minesweeper.py target/debug/omarchy-retro-arcade`: exit 0 under Xvfb. Keyboard, pause, same-window shelf, exact resume and rejected-save preservation.
+- `scripts/native-minesweeper-theme.py target/debug/omarchy-retro-arcade`: exit 0 under Xvfb. Live dark-to-light switch, invalid-file retention, live fontconfig font switch, unchanged board.
+- Inspected real application captures: Intermediate at 1280×900 in dark and light fixture palettes, Expert at 900×760. Temporary XDG profiles; no runtime gameplay/rendering hooks. Two captures reuse the same board. Captures were delivered separately, not added to the player package.
+
+Display dependencies were extracted locally for this pass; Xvfb and the app ran in the same process environment over loopback. This resolves the earlier local Xvfb limitation, not the outstanding Arch package or real Omarchy/Wayland acceptance. No whole-workspace test rerun is claimed for this appearance-only pass.
+
+Upstream font contract inspected: omacom/omarchy quattro `bin/omarchy-font-current` blob 839bd4db7b629db34c30988992fe0da0b12925a7 and `bin/omarchy-font-set` blob 080f055b7121d6f66631639318541dbd0d7df33e; fontconfig is canonical.

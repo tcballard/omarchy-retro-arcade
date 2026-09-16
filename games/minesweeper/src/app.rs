@@ -1,4 +1,5 @@
 use crate::{
+    appearance::{self, DesktopFont, Palette},
     engine::{Difficulty, Game, Status},
     storage::{self, Save},
 };
@@ -16,6 +17,7 @@ pub struct App {
     error: Option<String>,
     theme: Theme,
     themed: Instant,
+    desktop_font: DesktopFont,
     tick: Instant,
     saved: Instant,
     paused: bool,
@@ -44,6 +46,7 @@ impl App {
             error,
             theme: Theme::load(),
             themed: Instant::now(),
+            desktop_font: DesktopFont::default(),
             tick: Instant::now(),
             saved: Instant::now(),
             paused,
@@ -88,6 +91,14 @@ impl App {
         self.was_running = false;
         self.flush();
     }
+    pub fn prepare_style(&mut self, ctx: &egui::Context) {
+        if self.themed.elapsed() > Duration::from_secs(1) {
+            appearance::reload(&mut self.theme, &appearance::paths());
+            self.themed = Instant::now();
+        }
+        self.desktop_font.poll(ctx);
+        Palette::new(&self.theme).apply(ctx);
+    }
     pub fn ui(&mut self, ctx: &egui::Context) {
         let now = Instant::now();
         let focused = ctx.input(|i| i.focused);
@@ -104,10 +115,6 @@ impl App {
         if !focused && self.state.game.status == Status::Playing {
             self.paused = true;
         }
-        if self.themed.elapsed() > Duration::from_secs(1) {
-            self.theme = Theme::load();
-            self.themed = now;
-        }
         if self.input_enabled
             && focused
             && !self.help
@@ -116,17 +123,7 @@ impl App {
         {
             self.paused = !self.paused;
         }
-        let mut visuals = if self.theme.light() {
-            egui::Visuals::light()
-        } else {
-            egui::Visuals::dark()
-        };
-        visuals.panel_fill = self.theme.background;
-        visuals.window_fill = self.theme.background;
-        visuals.override_text_color = Some(self.theme.foreground);
-        visuals.selection.bg_fill = self.theme.accent;
-        ctx.set_visuals(visuals);
-        arcade_presentation::apply(ctx);
+        self.prepare_style(ctx);
         let enabled = !blocked_at_start && !self.paused;
         if enabled {
             // Consume gameplay keys before buttons can activate from Space/Enter.
@@ -168,61 +165,124 @@ impl App {
                     .inner_margin(20),
             )
             .show(ctx, |ui| {
-                ui.horizontal_wrapped(|ui| {
-                    ui.heading(egui::RichText::new("MINESWEEPER").color(self.theme.foreground));
-                    ui.separator();
-                    ui.label(format!(
-                        "MINES {:03}   TIME {:03}",
-                        self.state.game.remaining(),
-                        self.state.game.elapsed_ms / 1000
-                    ));
-                    if ui.button("New game").clicked() {
-                        self.restart = Some(self.state.game.difficulty);
-                    }
-                    if ui
-                        .button(if self.paused { "Resume" } else { "Pause" })
-                        .clicked()
-                    {
-                        self.paused = !self.paused;
-                    }
-                    if ui.button("Help").clicked() {
-                        self.help = true;
-                    }
-                });
-                ui.horizontal(|ui| {
-                    for d in Difficulty::ALL {
-                        if ui
-                            .selectable_label(self.state.game.difficulty == d, d.name())
-                            .clicked()
-                            && d != self.state.game.difficulty
-                        {
-                            self.restart = Some(d);
-                        }
-                    }
-                });
-                let record = &self.state.records[self.state.game.difficulty.index()];
-                ui.label(format!(
-                    "{} wins / {} played    Best: {}",
-                    record.wins,
-                    record.played,
-                    record
-                        .best_ms
-                        .map_or("—".into(), |ms| format!("{:.1}s", ms as f64 / 1000.))
-                ));
-                match self.state.game.status {
-                    Status::Won => {
-                        ui.label("FIELD CLEARED. Nicely done.");
-                    }
-                    Status::Lost => {
-                        ui.label("MINE HIT. One more go?");
-                    }
-                    Status::Ready => {
-                        ui.label("Pick your opening. The first reveal is safe.");
-                    }
-                    Status::Playing => {
-                        ui.label("Reveal · Flag · Read the numbers");
-                    }
+                let palette = Palette::new(&self.theme);
+                let (w, h, mines) = self.state.game.difficulty.dimensions();
+                let shell_width = ui.available_width().min(if w == 30 { 1180. } else { 900. });
+                let left = (ui.available_width() - shell_width) / 2.;
+                let (header, _) =
+                    ui.allocate_exact_size(Vec2::new(ui.available_width(), 76.), Sense::hover());
+                let shell_left = header.left() + left;
+                let shell_right = shell_left + shell_width;
+                ui.painter().text(
+                    egui::pos2(shell_left, header.top() + 8.),
+                    Align2::LEFT_TOP,
+                    "MINESWEEPER",
+                    FontId::monospace(27.),
+                    palette.ink,
+                );
+                ui.painter().text(
+                    egui::pos2(shell_left, header.top() + 47.),
+                    Align2::LEFT_TOP,
+                    format!("{} × {} FIELD  /  {} MINES", w, h, mines),
+                    FontId::monospace(11.),
+                    palette.muted,
+                );
+                for (index, name, value) in [
+                    (
+                        0.,
+                        "TIME",
+                        format!(
+                            "{:02}:{:02}",
+                            self.state.game.elapsed_ms / 60000,
+                            self.state.game.elapsed_ms / 1000 % 60
+                        ),
+                    ),
+                    (
+                        1.,
+                        "REMAINING",
+                        format!("{:02}", self.state.game.remaining()),
+                    ),
+                ] {
+                    let r = Rect::from_min_size(
+                        egui::pos2(shell_right - 120. - index * 132., header.top()),
+                        Vec2::new(120., 66.),
+                    );
+                    ui.painter().rect_filled(r, 0., palette.surface);
+                    ui.painter().rect_stroke(
+                        r,
+                        0.,
+                        Stroke::new(1_f32, palette.line),
+                        StrokeKind::Inside,
+                    );
+                    ui.painter().text(
+                        egui::pos2(r.center().x, r.top() + 10.),
+                        Align2::CENTER_TOP,
+                        name,
+                        FontId::monospace(10.),
+                        palette.muted,
+                    );
+                    ui.painter().text(
+                        egui::pos2(r.center().x, r.top() + 29.),
+                        Align2::CENTER_TOP,
+                        &value,
+                        FontId::monospace(25.),
+                        palette.ink,
+                    );
+                    ui.interact(r, ui.id().with(name), Sense::hover())
+                        .widget_info(|| {
+                            egui::WidgetInfo::labeled(
+                                egui::WidgetType::Label,
+                                true,
+                                format!("{name}: {value}"),
+                            )
+                        });
                 }
+                ui.add_space(10.);
+                ui.horizontal(|ui| {
+                    ui.add_space(left);
+                    ui.allocate_ui_with_layout(
+                        Vec2::new(shell_width, 34.),
+                        egui::Layout::left_to_right(egui::Align::Center),
+                        |ui| {
+                            for d in Difficulty::ALL {
+                                let selected = self.state.game.difficulty == d;
+                                let button = egui::Button::new(
+                                    egui::RichText::new(d.name()).color(if selected {
+                                        palette.accent_ink
+                                    } else {
+                                        palette.ink
+                                    }),
+                                )
+                                .fill(if selected {
+                                    palette.accent
+                                } else {
+                                    palette.surface
+                                });
+                                if ui.add(button).clicked() && !selected {
+                                    self.restart = Some(d);
+                                }
+                            }
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if ui.button("Help").clicked() {
+                                        self.help = true;
+                                    }
+                                    if ui
+                                        .button(if self.paused { "Resume" } else { "Pause" })
+                                        .clicked()
+                                    {
+                                        self.paused = !self.paused;
+                                    }
+                                    if ui.button("New game").clicked() {
+                                        self.restart = Some(self.state.game.difficulty);
+                                    }
+                                },
+                            );
+                        },
+                    );
+                });
+                ui.add_space(16.);
                 if let Some(e) = &self.error {
                     ui.colored_label(
                         self.theme.accent,
@@ -236,115 +296,226 @@ impl App {
                         ),
                     );
                 }
-                ui.add_space(10.);
                 let enabled =
                     !blocked_at_start && !self.paused && !self.help && self.restart.is_none();
-                let (w, h, _) = self.state.game.difficulty.dimensions();
-                let cell = ((ui.available_width() - 8.) / w as f32)
-                    .min((ui.available_height() - 40.) / h as f32)
-                    .clamp(20., 42.);
-                egui::ScrollArea::both().show(ui, |ui| {
-                    let (area, _) = ui.allocate_exact_size(
-                        Vec2::new(cell * w as f32, cell * h as f32),
-                        Sense::hover(),
-                    );
-                    #[cfg(test)]
-                    self.cell_rects.clear();
-                    for n in 0..self.state.game.cells.len() {
-                        let r = Rect::from_min_size(
-                            area.min + Vec2::new((n % w) as f32 * cell, (n / w) as f32 * cell),
-                            Vec2::splat(cell),
-                        )
-                        .shrink(1.);
-                        #[cfg(test)]
-                        self.cell_rects.push(r);
-                        let response = ui.interact(r, ui.id().with(n), Sense::click());
-                        if enabled
-                            && (response.clicked()
-                                || response.secondary_clicked()
-                                || response.middle_clicked())
-                        {
-                            self.cursor = n;
-                            let a = if response.secondary_clicked() {
-                                1
-                            } else if response.middle_clicked() || self.state.game.cells[n].revealed
-                            {
-                                2
-                            } else {
-                                0
-                            };
-                            self.action(a);
-                        }
-                        let c = self.state.game.cells[n];
-                        let lost = self.state.game.status == Status::Lost;
-                        let hidden = self.paused || self.help || self.restart.is_some();
-                        let fill = if !hidden && self.state.game.exploded == Some(n) {
-                            self.theme.accent
-                        } else {
-                            self.theme.background.lerp_to_gamma(
-                                self.theme.foreground,
-                                if !hidden && c.revealed { 0.04 } else { 0.16 },
-                            )
-                        };
-                        ui.painter().rect_filled(r, 0., fill);
-                        let text = if hidden {
-                            "".into()
-                        } else if lost && c.flagged && !c.mine {
-                            "X".into()
-                        } else if c.flagged {
-                            "F".into()
-                        } else if lost && c.mine {
-                            "*".into()
-                        } else if c.revealed {
-                            let a = self.state.game.adjacent(n);
-                            if a == 0 {
-                                "".into()
-                            } else {
-                                a.to_string()
-                            }
-                        } else {
-                            "".into()
-                        };
-                        ui.painter().text(
-                            r.center(),
-                            Align2::CENTER_CENTER,
-                            &text,
-                            FontId::monospace(cell * 0.58),
-                            self.theme.foreground,
+                let cell = ((ui.available_width() - 32.) / w as f32)
+                    .min((ui.available_height() - 88.) / h as f32)
+                    .clamp(20., 48.);
+                let board_size = Vec2::new(cell * w as f32, cell * h as f32);
+                egui::ScrollArea::both()
+                    .auto_shrink([false, true])
+                    .show(ui, |ui| {
+                        let (space, _) = ui.allocate_exact_size(
+                            Vec2::new(
+                                ui.available_width().max(board_size.x + 24.),
+                                board_size.y + 24.,
+                            ),
+                            Sense::hover(),
                         );
-                        if n == self.cursor {
-                            ui.painter().rect_stroke(
-                                r,
-                                0.,
-                                Stroke::new(2_f32, self.theme.accent),
-                                StrokeKind::Inside,
-                            );
-                        }
-                        response.widget_info(|| {
-                            egui::WidgetInfo::labeled(
-                                egui::WidgetType::Button,
-                                enabled,
-                                format!(
-                                    "Row {}, column {}: {}",
-                                    n / w + 1,
-                                    n % w + 1,
-                                    if hidden {
-                                        "paused".into()
-                                    } else if text.is_empty() {
-                                        if c.revealed {
-                                            "empty".into()
-                                        } else {
-                                            "covered".into()
-                                        }
-                                    } else {
-                                        text.clone()
-                                    }
-                                ),
+                        let area = Rect::from_center_size(space.center(), board_size);
+                        ui.painter()
+                            .rect_filled(area.expand(10.), 0., palette.surface);
+                        ui.painter().rect_stroke(
+                            area.expand(10.),
+                            0.,
+                            Stroke::new(1_f32, palette.line),
+                            StrokeKind::Inside,
+                        );
+                        #[cfg(test)]
+                        self.cell_rects.clear();
+                        for n in 0..self.state.game.cells.len() {
+                            let r = Rect::from_min_size(
+                                area.min + Vec2::new((n % w) as f32 * cell, (n / w) as f32 * cell),
+                                Vec2::splat(cell),
                             )
-                        });
+                            .shrink(1.);
+                            #[cfg(test)]
+                            self.cell_rects.push(r);
+                            let response = ui.interact(r, ui.id().with(n), Sense::click());
+                            if enabled
+                                && (response.clicked()
+                                    || response.secondary_clicked()
+                                    || response.middle_clicked())
+                            {
+                                self.cursor = n;
+                                let a = if response.secondary_clicked() {
+                                    1
+                                } else if response.middle_clicked()
+                                    || self.state.game.cells[n].revealed
+                                {
+                                    2
+                                } else {
+                                    0
+                                };
+                                self.action(a);
+                            }
+                            let c = self.state.game.cells[n];
+                            let lost = self.state.game.status == Status::Lost;
+                            let hidden = self.paused || self.help || self.restart.is_some();
+                            let covered = hidden || !c.revealed;
+                            let exploded = !hidden && self.state.game.exploded == Some(n);
+                            let fill = if exploded {
+                                palette.accent
+                            } else if enabled && response.hovered() && covered {
+                                palette.hover
+                            } else if covered {
+                                palette.raised
+                            } else {
+                                palette.bg
+                            };
+                            ui.painter().rect_filled(r, 0., fill);
+                            if covered {
+                                ui.painter().line_segment(
+                                    [r.left_bottom(), r.left_top()],
+                                    Stroke::new(1_f32, palette.line),
+                                );
+                                ui.painter().line_segment(
+                                    [r.left_top(), r.right_top()],
+                                    Stroke::new(1_f32, palette.line),
+                                );
+                            }
+                            let text = if hidden {
+                                "".into()
+                            } else if lost && c.flagged && !c.mine {
+                                "X".into()
+                            } else if c.flagged {
+                                "F".into()
+                            } else if lost && c.mine {
+                                "*".into()
+                            } else if c.revealed {
+                                let a = self.state.game.adjacent(n);
+                                if a == 0 {
+                                    "".into()
+                                } else {
+                                    a.to_string()
+                                }
+                            } else {
+                                "".into()
+                            };
+                            let ink = appearance::ink(
+                                fill,
+                                if c.flagged && !hidden {
+                                    palette.focus
+                                } else {
+                                    palette.ink
+                                },
+                            );
+                            if !hidden && c.flagged && !(lost && !c.mine) {
+                                // A flag silhouette remains legible without colour or a symbol font.
+                                let pole = r.center().x - cell * 0.12;
+                                let top = r.top() + cell * 0.23;
+                                let bottom = r.bottom() - cell * 0.22;
+                                ui.painter().line_segment(
+                                    [egui::pos2(pole, top), egui::pos2(pole, bottom)],
+                                    Stroke::new(2_f32, ink),
+                                );
+                                ui.painter().add(egui::Shape::convex_polygon(
+                                    vec![
+                                        egui::pos2(pole, top),
+                                        egui::pos2(r.right() - cell * 0.2, top + cell * 0.12),
+                                        egui::pos2(pole, top + cell * 0.28),
+                                    ],
+                                    ink,
+                                    Stroke::NONE,
+                                ));
+                                ui.painter().line_segment(
+                                    [
+                                        egui::pos2(pole - cell * 0.13, bottom),
+                                        egui::pos2(pole + cell * 0.15, bottom),
+                                    ],
+                                    Stroke::new(2_f32, ink),
+                                );
+                            } else if !hidden && lost && c.mine {
+                                ui.painter().circle_filled(r.center(), cell * 0.15, ink);
+                                for delta in [
+                                    Vec2::new(cell * 0.26, 0.),
+                                    Vec2::new(0., cell * 0.26),
+                                    Vec2::splat(cell * 0.19),
+                                    Vec2::new(cell * 0.19, -cell * 0.19),
+                                ] {
+                                    ui.painter().line_segment(
+                                        [r.center() - delta, r.center() + delta],
+                                        Stroke::new(1.5_f32, ink),
+                                    );
+                                }
+                            } else {
+                                ui.painter().text(
+                                    r.center(),
+                                    Align2::CENTER_CENTER,
+                                    &text,
+                                    FontId::monospace(cell * 0.52),
+                                    ink,
+                                );
+                            }
+                            if n == self.cursor {
+                                ui.painter().rect_stroke(
+                                    r.shrink(2.),
+                                    0.,
+                                    Stroke::new(2_f32, palette.focus),
+                                    StrokeKind::Inside,
+                                );
+                            }
+                            response.widget_info(|| {
+                                egui::WidgetInfo::labeled(
+                                    egui::WidgetType::Button,
+                                    enabled,
+                                    format!(
+                                        "Row {}, column {}: {}",
+                                        n / w + 1,
+                                        n % w + 1,
+                                        if hidden {
+                                            "paused".into()
+                                        } else if text.is_empty() {
+                                            if c.revealed {
+                                                "empty".into()
+                                            } else {
+                                                "covered".into()
+                                            }
+                                        } else {
+                                            text.clone()
+                                        }
+                                    ),
+                                )
+                            });
+                        }
+                    });
+                ui.add_space(8.);
+                let record = &self.state.records[self.state.game.difficulty.index()];
+                let status = if self.paused {
+                    "PAUSED"
+                } else {
+                    match self.state.game.status {
+                        Status::Won => "FIELD CLEARED",
+                        Status::Lost => "MINE HIT",
+                        Status::Ready => "FIRST REVEAL IS SAFE",
+                        Status::Playing => "READ THE FIELD",
                     }
+                };
+                ui.vertical_centered(|ui| {
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{}   ·   {} WINS / {} PLAYED   ·   BEST {}",
+                            status,
+                            record.wins,
+                            record.played,
+                            record
+                                .best_ms
+                                .map_or("—".into(), |ms| format!("{:.1}s", ms as f64 / 1000.))
+                        ))
+                        .monospace()
+                        .size(11.)
+                        .color(palette.muted),
+                    );
+                    ui.add_space(4.);
+                    ui.label(
+                        egui::RichText::new(
+                            "Arrows move   Space reveal   F flag   C chord   Esc pause",
+                        )
+                        .monospace()
+                        .size(11.)
+                        .color(palette.muted),
+                    );
                 });
-                ui.label("Arrows move · Space reveal · F flag · C chord · Esc pause");
             });
         if self.paused && !self.help && self.restart.is_none() {
             egui::Modal::new(egui::Id::new("mines-pause")).show(ctx, |ui| {

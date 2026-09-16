@@ -50,6 +50,8 @@ jobs:
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-check.py target/release/omarchy-retro-arcade
       - name: Minesweeper controls, exact resume and save protection
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-minesweeper.py target/release/omarchy-retro-arcade
+      - name: Minesweeper live desktop palette replacement
+        run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-minesweeper-theme.py target/release/omarchy-retro-arcade
       - name: Tanks controls, exact resume and save protection
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-tanks.py target/release/omarchy-retro-arcade
       - name: Shatter controls, exact resume and save protection

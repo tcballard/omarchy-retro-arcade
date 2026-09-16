@@ -112,6 +112,7 @@ impl Game {
     }
 }
 trait ArcadeGame: eframe::App {
+    fn prepare_style(&mut self, _: &egui::Context) {}
     fn ready(&self) -> bool {
         true
     }
@@ -168,6 +169,9 @@ impl ArcadeGame for omarchy_tanks::app::App {
     }
 }
 impl ArcadeGame for omarchy_minesweeper::app::App {
+    fn prepare_style(&mut self, ctx: &egui::Context) {
+        self.prepare_style(ctx);
+    }
     fn suspend(&mut self) {
         self.suspend();
     }
@@ -310,6 +314,9 @@ impl eframe::App for Arcade {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         arcade_presentation::apply(ctx);
+        if let Some(a) = self.active.as_mut() {
+            a.app.prepare_style(ctx);
+        }
         if let Some(a) = self.active.as_ref() {
             egui::TopBottomPanel::top("arcade-navigation")
                 .frame(
@@ -328,11 +335,13 @@ impl eframe::App for Arcade {
                             toggle_fullscreen(ctx);
                         }
                         ui.separator();
-                        ui.label(
-                            egui::RichText::new(a.game.name())
-                                .monospace()
-                                .color(arcade_presentation::BRASS),
-                        );
+                        ui.label(egui::RichText::new(a.game.name()).monospace().color(
+                            if a.game == Game::Minesweeper {
+                                ctx.style().visuals.text_color()
+                            } else {
+                                arcade_presentation::BRASS
+                            },
+                        ));
                     });
                 });
         }
