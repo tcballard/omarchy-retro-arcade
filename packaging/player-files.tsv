@@ -35,3 +35,7 @@ games/shatter/THIRD_PARTY.md	share/licenses/omarchy-retro-arcade/shatter/THIRD_P
 games/invaders/docs/ARTWORK.md	share/doc/omarchy-retro-arcade/invaders/ARTWORK.md
 games/tanks/HELP.md	share/doc/omarchy-retro-arcade/tanks/HELP.md
 games/tanks/THIRD_PARTY.md	share/licenses/omarchy-retro-arcade/tanks/THIRD_PARTY.md
+games/minesweeper/README.md	share/doc/omarchy-retro-arcade/minesweeper/README.md
+games/minesweeper/LICENSE	share/licenses/omarchy-retro-arcade/minesweeper/LICENSE
+games/minesweeper/VERIFICATION.md	share/doc/omarchy-retro-arcade/minesweeper/VERIFICATION.md
+games/minesweeper/verification.sha256	share/doc/omarchy-retro-arcade/minesweeper/verification.sha256

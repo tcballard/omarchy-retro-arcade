@@ -204,3 +204,7 @@ including Ctrl+V over an existing name and saving before releasing Ctrl.
   flashes, weapon-specific impacts and damage labels. Native X11 renders are
   inspected at dark/light, compact and 200%; this does not establish Omarchy
   Wayland acceptance or competitive balance against the gameplay benchmark.
+
+## Minesweeper (issue #43)
+
+Original Rust game in the shared Arcade window; no new runtime or standalone launcher. Mines are placed on first reveal, excluding its neighbours. Random boards may require guessing. Per-difficulty played counts increase on first reveal (abandoned started boards count), wins update on the winning action, and exact board/timer/records persist atomically together. Invalid/future saves remain untouched and disable writes for that session. The game is silent and adds no independent audio preference. Shelf SVG is original illustrative artwork, not a gameplay capture.

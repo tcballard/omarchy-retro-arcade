@@ -16,6 +16,7 @@ impl Game {
             Self::Blast => "ARENA / SOLO + LOCAL",
             Self::TwentyFortyEight => "PUZZLE / 2048",
             Self::Tanks => "ARTILLERY / SOLO + LOCAL",
+            Self::Minesweeper => "PUZZLE / THREE DIFFICULTIES",
             Self::Shatter => "ARCADE / BRICK BREAKER",
         }
     }
@@ -32,6 +33,7 @@ impl Game {
             Self::Blast => ([0.07, 0.13], [0.93, 0.96]),
             Self::TwentyFortyEight => ([0., 0.], [1., 1.]),
             Self::Tanks => ([0., 0.], [1., 1.]),
+            Self::Minesweeper => ([0., 0.], [1., 1.]),
             Self::Shatter => ([0., 0.], [1., 1.]),
         };
         Rect::from_min_max(Pos2::from(a), Pos2::from(b))

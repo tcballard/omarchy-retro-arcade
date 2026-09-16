@@ -1,5 +1,5 @@
 [workspace]
-members = ["games/tanks", "games/shatter", "arcade", "games/chess", "games/solitaire", "games/scram", "games/invaders", "games/stack", "games/snake", "games/bubble", "games/blast", "games/2048", "shared/presentation", "shared/leaderboard", "services/leaderboard"]
+members = ["games/minesweeper", "games/tanks", "games/shatter", "arcade", "games/chess", "games/solitaire", "games/scram", "games/invaders", "games/stack", "games/snake", "games/bubble", "games/blast", "games/2048", "shared/presentation", "shared/leaderboard", "services/leaderboard"]
 exclude = ["games/2048/upstream/src-tauri"]
 resolver = "2"
 

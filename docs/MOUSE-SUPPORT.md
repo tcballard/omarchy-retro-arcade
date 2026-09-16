@@ -42,3 +42,7 @@ Automated egui input tests and X11 native checks are separate from an actual Oma
 - Opening/closing menus and dialogs cannot also play a move, fire a shot or activate a worker menu underneath.
 - Keyboard controls still work immediately after mouse use; leaving the field, releasing a held click and losing focus stop pointer firing.
 - Collection, game controls and confirmation dialogs remain usable in light/dark themes, compact windows and 200% scale.
+
+### Minesweeper
+
+Left-click reveals; right-click flags; clicking a revealed number or middle-clicking chords. Arrow keys move the focus, Space reveals, F flags and C chords. Esc pauses. Menus hide the board and suspend the timer.

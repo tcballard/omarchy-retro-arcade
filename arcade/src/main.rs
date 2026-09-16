@@ -22,9 +22,10 @@ enum Game {
     TwentyFortyEight,
     Shatter,
     Tanks,
+    Minesweeper,
 }
 impl Game {
-    const ALL: [Self; 12] = [
+    const ALL: [Self; 13] = [
         Self::Pinball,
         Self::Solitaire,
         Self::Scram,
@@ -37,6 +38,7 @@ impl Game {
         Self::TwentyFortyEight,
         Self::Shatter,
         Self::Tanks,
+        Self::Minesweeper,
     ];
     fn id(self) -> &'static str {
         match self {
@@ -51,6 +53,7 @@ impl Game {
             Self::Blast => "blast",
             Self::TwentyFortyEight => "2048",
             Self::Tanks => "tanks",
+            Self::Minesweeper => "minesweeper",
             Self::Shatter => "shatter",
         }
     }
@@ -67,6 +70,7 @@ impl Game {
             Self::Blast => "Blast",
             Self::TwentyFortyEight => "2048",
             Self::Tanks => "Tanks",
+            Self::Minesweeper => "Minesweeper",
             Self::Shatter => "Shatter",
         }
     }
@@ -83,6 +87,7 @@ impl Game {
             Self::Blast => "Make room. Leave an exit.",
             Self::TwentyFortyEight => "Slide together. Make something bigger.",
             Self::Tanks => "Read the wind. Change the landscape.",
+            Self::Minesweeper => "Read the field. Trust your next move.",
             Self::Shatter => "Find your angle. Break through.",
         }
     }
@@ -92,6 +97,7 @@ impl Game {
             Self::Snake => egui::include_image!("../../games/snake/docs/shelf.svg"),
             Self::Bubble => egui::include_image!("../../games/bubble/docs/game.png"),
             Self::Blast => egui::include_image!("../../games/blast/docs/game.png"),
+            Self::Minesweeper => egui::include_image!("../../games/minesweeper/docs/shelf.svg"),
             Self::Tanks => egui::include_image!("../../games/tanks/shelf.svg"),
             Self::Shatter => egui::include_image!("../../games/shatter/docs/shelf.svg"),
             Self::TwentyFortyEight => egui::include_image!("../../games/2048/docs/shelf.svg"),
@@ -161,6 +167,14 @@ impl ArcadeGame for omarchy_tanks::app::App {
         omarchy_tanks::app::App::finished(self)
     }
 }
+impl ArcadeGame for omarchy_minesweeper::app::App {
+    fn suspend(&mut self) {
+        self.suspend();
+    }
+    fn set_input_enabled(&mut self, enabled: bool) {
+        self.set_input_enabled(enabled);
+    }
+}
 impl ArcadeGame for omarchy_2048::app::App {}
 impl ArcadeGame for omarchy_chess::ui::ChessApp {}
 impl ArcadeGame for omarchy_solitaire::app::SolitaireApp {}
@@ -220,6 +234,7 @@ impl Arcade {
                 Game::Snake => Box::new(omarchy_snake::app::SnakeApp::new()),
                 Game::Bubble => Box::new(omarchy_bubble::app::BubbleApp::new()),
                 Game::Blast => Box::new(omarchy_blast::app::App::new()),
+                Game::Minesweeper => Box::new(omarchy_minesweeper::app::App::new()?),
                 Game::Tanks => Box::new(omarchy_tanks::app::App::new()),
                 Game::Shatter => Box::new(omarchy_shatter::app::App::new()),
                 Game::TwentyFortyEight => Box::new(omarchy_2048::app::App::new()?),
@@ -436,7 +451,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
             "--help" | "-h" => {
-                println!("Omarchy Arcade\n--game chess|solitaire|scram|invaders|pinball|stack|snake|bubble|blast|2048|shatter|tanks\n--screenshot PATH\n--compact\n--version\nCtrl+H: return to Arcade. Ctrl+Q: quit.");
+                println!("Omarchy Arcade\n--game chess|solitaire|scram|invaders|pinball|stack|snake|bubble|blast|2048|shatter|tanks|minesweeper\n--screenshot PATH\n--compact\n--version\nCtrl+H: return to Arcade. Ctrl+Q: quit.");
                 return Ok(());
             }
             "--game" => {

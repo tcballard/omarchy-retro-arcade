@@ -46,8 +46,10 @@ jobs:
         with:
           name: polish-review
           path: /tmp/arcade-polish/
-      - name: One window, twelve games, existing saves
+      - name: One window, thirteen games, existing saves
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy python3 scripts/native-check.py target/release/omarchy-retro-arcade
+      - name: Minesweeper controls, exact resume and save protection
+        run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-minesweeper.py target/release/omarchy-retro-arcade
       - name: Tanks controls, exact resume and save protection
         run: xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 python3 scripts/native-tanks.py target/release/omarchy-retro-arcade
       - name: Shatter controls, exact resume and save protection
@@ -77,7 +79,7 @@ jobs:
       - name: Capture the actual app
         run: |
           mkdir -p /tmp/arcade-renders
-          for game in chess solitaire scram invaders pinball stack snake bubble blast 2048 shatter tanks; do
+          for game in chess solitaire scram invaders pinball stack snake bubble blast 2048 shatter tanks minesweeper; do
             xvfb-run -a -s '-screen 0 1440x1100x24' env LIBGL_ALWAYS_SOFTWARE=1 SDL_AUDIODRIVER=dummy XDG_STATE_HOME=/tmp/arcade-$game/state XDG_DATA_HOME=/tmp/arcade-$game/data XDG_CONFIG_HOME=/tmp/arcade-$game/config target/release/omarchy-retro-arcade --game "$game" --screenshot "/tmp/arcade-renders/$game.png"
           done
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 target/release/omarchy-retro-arcade --compact --screenshot /tmp/arcade-renders/shelf-compact.png

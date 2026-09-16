@@ -4,7 +4,7 @@
 
 <a href="https://github.com/tcballard/omarchy-badges"><img src="https://raw.githubusercontent.com/tcballard/omarchy-badges/75975e5b5bf75e7ede3764bcd2950046f7abfe2c/badges/v1/omarchy-app.svg" height="20" alt="Omarchy App community badge"></a>
 
-**Twelve games. One native app. One more go.**
+**Thirteen games. One native app. One more go.**
 
 A collection of classic games for Omarchy. Play pinball, cards, puzzles and arcade games in one native window, with offline play, local saves and an interface that follows your desktop theme.
 
@@ -12,11 +12,13 @@ A collection of classic games for Omarchy. Play pinball, cards, puzzles and arca
 
 ![Omarchy Arcade's opening collection, with a full Pinball preview and all nine games in the selector](docs/polish/shelf.png)
 
-Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048 · Shatter · Tanks
+Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048 · Shatter · Tanks · Minesweeper
 
 **v0.2.0 for x86_64 Omarchy.** Twelve games, including 2048, Shatter and Tanks.
 [Download v0.2.0](https://github.com/tcballard/omarchy-retro-arcade/releases/tag/v0.2.0)
 for the player package, matching source, checksums and current testing limitations.
+
+Minesweeper is available in source builds: three difficulties, safe first reveal, mouse/keyboard play and resumable boards. It is not included in v0.2.0. [Controls and development status](games/minesweeper/README.md).
 
 ## Install
 
@@ -31,7 +33,7 @@ sudo pacman -U ./omarchy-retro-arcade-0.2.0-1-x86_64.pkg.tar.zst
 
 Open **Omarchy Arcade** from your app launcher. Click a game and **Play**, or double-click its title. You can also select with the arrow keys and press `Enter`. Click **Arcade** (or press `Ctrl+H`) to return; **Full screen** and `F11` toggle fullscreen, and `Ctrl+Q` quits. See the [mouse controls and per-game input guide](docs/MOUSE-SUPPORT.md).
 
-The package includes all twelve games and a bundled Stockfish engine for Chess. It replaces conflicting standalone game packages while retaining their existing save files and settings. The app works offline and needs no account.
+The v0.2.0 package includes twelve games and a bundled Stockfish engine for Chess. It replaces conflicting standalone game packages while retaining their existing save files and settings. The app works offline and needs no account.
 
 The release supports **x86_64** and includes the checked player package, matching
 application/Stockfish source, build identity and SHA-256 checksums. Automated
@@ -53,7 +55,9 @@ scripts/build.sh
 
 The build uses every core. Set `ARCADE_BUILD_JOBS` to limit it.
 
-### Install a source build
+#Minesweeper is available in source builds: three difficulties, safe first reveal, mouse/keyboard play and resumable boards. It is not included in v0.2.0. [Controls and development status](games/minesweeper/README.md).
+
+## Install a source build
 
 `scripts/install.sh` joins a `DESTDIR` and a `PREFIX`, so a system install reads:
 
@@ -84,14 +88,14 @@ PRs, issues and playtesting are encouraged. [Report a bug, suggest an improvemen
 ## Source layout
 
 - `arcade/`: the Rust app, collection shelf and local Pinball transport.
-- `games/`: twelve ordinary game directories, preserving all imported Git history.
+- `games/`: thirteen ordinary game directories, preserving all imported Git history.
 - `packaging/`: one Arch package, icon and desktop entry.
 - `scripts/`: shared build, staging and verification entry points.
 - `shared/presentation/`: shared cabinet materials, control styling and artwork.
 - `shared/leaderboard/`: optional background HTTP transport.
 - `services/leaderboard/`: separately deployable replay-validation service; no public endpoint is bundled.
 
-Nine Rust games draw directly into the shared window. Pinball retains the upstream C++ physics engine in a private worker whose rendering appears in that same window, including on Wayland. No browser, X11 child-window embedding or separate game launcher is used.
+Twelve Rust games draw directly into the shared window. Pinball retains the upstream C++ physics engine in a private worker whose rendering appears in that same window, including on Wayland. No browser, X11 child-window embedding or separate game launcher is used.
 
 Existing save paths remain authoritative. Pinball preserves high scores and settings, but does not resume unfinished tables. The other games save when returning to Arcade.
 
