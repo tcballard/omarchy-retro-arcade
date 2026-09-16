@@ -38,3 +38,11 @@ Original implementation and illustrative shelf SVG, GPL-3.0-or-later. No third-p
 The centred field, counters, controls, focus, hover states and dialogs derive from Omarchy’s current `colors.toml` (background, foreground, accent). Current XDG state paths take precedence over the legacy config path. Valid palette changes apply while playing; an unreadable or incomplete replacement keeps the last valid palette. Derived text colours enforce readable contrast. No fixed brass or sage accents are applied to this game.
 
 The desktop monospace font resolves through `fc-match`, matching Omarchy’s fontconfig source of truth. Resolution runs off the UI thread with a bounded process timeout, validates font data and reloads changes without restarting the game. Bundled fonts remain the fallback if fontconfig or its selected font cannot be used. Gameplay keys remain Arrows/Space/F/C/Esc; theme changes do not alter key bindings.
+
+## Application captures
+
+Actual native app at runtime revision `26f774d`, captured under Xvfb at 1× with temporary game profiles and desktop palette fixtures. These demonstrate rendering, not Hyprland/Wayland acceptance.
+
+![Intermediate, dark desktop palette](docs/dark.png)
+
+[Light desktop palette](docs/light.png) · [Expert at 900×760](docs/expert.png)
