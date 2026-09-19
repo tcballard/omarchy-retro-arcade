@@ -28,9 +28,11 @@ all sixteen existing save/config files remained byte-identical. Installed
 Wayland reopen also preserved the old Solitaire session and real FreeSki save.
 See VERIFICATION.md for exact revisions and evidence limits.
 
-PR #42 is prepared for maintainer review. Its current GitHub checks must pass
-before merge. Merge closes #14; publishing a release remains the maintainer's
-choice. No further broad gameplay implementation is planned.
+PR #42 is merged. Arcade v0.4.0 release preparation now tracks the integrated
+cleanup, versioned CI, package assets and final desktop checks in
+[release preparation](../../../docs/releases/PREPARATION.md). Historical gameplay
+sign-off remains valid within its recorded scope. No further broad gameplay
+implementation is planned.
 
 No broad repeat of approved playtesting is required unless integration changes
 or a discovered regression justify it. Keep automated evidence and human reports
