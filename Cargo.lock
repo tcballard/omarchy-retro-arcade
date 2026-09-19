@@ -185,7 +185,7 @@ dependencies = [
 
 [[package]]
 name = "arcade-leaderboard"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "reqwest",
  "serde",
@@ -194,7 +194,7 @@ dependencies = [
 
 [[package]]
 name = "arcade-leaderboard-service"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-leaderboard",
  "omarchy-stack",
@@ -206,7 +206,7 @@ dependencies = [
 
 [[package]]
 name = "arcade-presentation"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "eframe",
  "image",
@@ -2577,7 +2577,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-2048"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2590,7 +2590,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-blast"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2602,7 +2602,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-bubble"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2614,7 +2614,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-chess"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2632,7 +2632,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-freeski"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2644,7 +2644,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-invaders"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2658,7 +2658,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-minesweeper"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2672,7 +2672,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-retro-arcade"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2697,7 +2697,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-scram"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2712,7 +2712,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-shatter"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2724,7 +2724,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-snake"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2736,7 +2736,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-solitaire"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",
@@ -2754,7 +2754,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-stack"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-leaderboard",
  "arcade-presentation",
@@ -2768,7 +2768,7 @@ dependencies = [
 
 [[package]]
 name = "omarchy-tanks"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "arcade-presentation",
  "eframe",

@@ -1,6 +1,6 @@
 # Build from a clean checkout with packaging/build-arch.sh.
 pkgname=omarchy-retro-arcade
-pkgver=0.3.0
+pkgver=0.4.0
 pkgrel=1
 pkgdesc='Native games in one Omarchy Arcade application'
 arch=('x86_64' 'aarch64')
