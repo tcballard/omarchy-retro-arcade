@@ -17,7 +17,9 @@ Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · 
 **v0.3.0 for x86_64 Omarchy.** Thirteen games, now including Minesweeper.
 [Download v0.3.0](https://github.com/tcballard/omarchy-retro-arcade/releases/tag/v0.3.0)
 for the player package, matching source, checksums and current testing limitations.
-This source revision also includes FreeSki.
+**Next release: v0.4.0 — FreeSki.** This source revision includes fourteen games.
+The release is being prepared; [preview the release notes](docs/releases/v0.4.0.md).
+The published v0.3.0 package above does not include FreeSki.
 
 Minesweeper adds three difficulties, safe first reveal, mouse/keyboard play and resumable boards. [Controls and development status](games/minesweeper/README.md).
 
