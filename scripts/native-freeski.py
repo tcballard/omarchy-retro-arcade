@@ -25,6 +25,14 @@ with tempfile.TemporaryDirectory(prefix='arcade-freeski-') as tmp:
         w=found[0];time.sleep(.5);x.XSetInputFocus(display,w,1,0);x.XFlush(display);time.sleep(.3)
         return app,w
     def read():return json.loads(save.read_text())
+    def wait_phase(phase, action):
+        deadline=time.monotonic()+5
+        while True:
+            observed=read()
+            if observed['run']['phase']==phase:return observed
+            assert app.poll() is None, (action, variant, 'app exited', app.returncode)
+            assert time.monotonic()<deadline, (action, variant, observed['run'])
+            time.sleep(.05)
     def capture(name):
         attr=WindowAttributes();x.XGetWindowAttributes(display,w,C.byref(attr))
         ImageGrab.grab(xdisplay=os.environ['DISPLAY']).crop((attr.x,attr.y,attr.x+attr.width,attr.y+attr.height)).save(out/(name+'.png'))
@@ -67,7 +75,12 @@ with tempfile.TemporaryDirectory(prefix='arcade-freeski-') as tmp:
         key(0xff0d);key(ord('d'),hold=1.1);key(0xff1b)
         handover=read()
         assert handover['run']['heading']>0, ('keyboard handover', variant, handover['run'])
-        key(0xff0d);key(0xffbe);help_save=read();capture('help');key(ord('d'));assert read()==help_save
+        # Observe both transitions: an old Paused checkpoint must not satisfy
+        # the F1 wait, and a delayed F1 must not leave a Running snapshot.
+        key(0xff0d);wait_phase('Running', 'resume before help')
+        key(0xffbe);help_save=wait_phase('Paused', 'open help')
+        capture('help');key(ord('d'))
+        assert read()==help_save, ('help steering isolation', variant, help_save, read())
         key(0xff1b);assert read()==help_save
         # Same window and exact suspended attempt survive shelf exit and normal close/reopen.
         saved=read();key(ord('h'),True);assert windows()==[w];capture('shelf')

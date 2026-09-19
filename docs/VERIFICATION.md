@@ -218,3 +218,20 @@ and verifies exactly-once save/game-drop/lock-release ordering.
 Not run locally: actual C++ engine/native switching and WM-close acceptance, Arch
 packaging and live Omarchy desktop testing. Existing CI must cover native Pinball
 controls and render/screenshot exit paths. No physics or save-format changes.
+
+
+### PR #53: FreeSki native help checkpoint synchronization (2026-09-19)
+
+The pull-request workflow run 35458985597 failed in the compact FreeSki native
+check at the help/save equality assertion; push run 35458982793 passed. The
+script previously captured the save after only the key helper's fixed delay.
+It now requires a persisted Running checkpoint before sending F1, then a
+persisted Paused checkpoint before taking the help snapshot. Each wait has a
+five-second deadline and reports the action, variant and observed run on timeout.
+The exact save-equality assertions for steering and dismissing help remain.
+No gameplay, save format or release version changes are included in this fix.
+
+Local checks: Python source compilation and git diff whitespace check passed.
+Native execution was not run locally because this environment has no Xvfb or
+built Arcade binary; the updated push and pull-request workflows must provide
+that evidence. This is not additional hands-on Omarchy/Wayland acceptance.
