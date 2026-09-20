@@ -15,6 +15,20 @@ with tempfile.TemporaryDirectory(prefix='arcade-nudge-') as tmp:
             return ImageGrab.grab(xdisplay=os.environ['DISPLAY']).crop((a.x,a.y,a.x+a.width,a.y+a.height)).convert('RGB')
         def board(im):return im.crop((220,120,400,220))
         def changed(a,b):return ImageChops.difference(a,b).getbbox() is not None
+        def raised(im):
+            # At this fixed window size the raised left blade crosses this
+            # patch. Count its ivory face, not arbitrary pixel differences:
+            # the rolling steel ball also crosses the old large flipper crop.
+            pixels=im.crop((300,670,370,722)).convert('RGB').getdata()
+            return sum(1 for r,g,b in pixels if r>215 and 0<=r-g<12 and 20<g-b<50)>100
+        def wait_flipper(up):
+            until=time.monotonic()+8
+            while time.monotonic()<until:
+                im=capture()
+                if raised(im)==up:return im
+                time.sleep(.05)
+            im.save(out/'flipper-timeout.png')
+            raise AssertionError('Flipper did not '+('rise' if up else 'return to rest'))
         def centred(reference):
             until=time.monotonic()+1.5
             while time.monotonic()<until:
@@ -61,18 +75,29 @@ with tempfile.TemporaryDirectory(prefix='arcade-nudge-') as tmp:
                 time.sleep(.2)
                 if changed(empty,launcher(capture())):break
             else:raise AssertionError('New-game ball did not appear')
+            # Positive control: prove that the native key and the blade
+            # detector work before interpreting lack of movement as lockout.
+            edge(ord('a'),True);wait_flipper(True).save(out/'flipper-raised.png')
+            edge(ord('a'),False);wait_flipper(False)
             time.sleep(1);edge(ord('x'),True)
-            # Standalone main may still discard elapsed render time. Observe
-            # lockout instead of assuming the separate timing fix is merged.
+            # Observe lockout with a deadline under variable render timing.
             until=time.monotonic()+60;quiet=0
             while time.monotonic()<until and quiet<3:
                 before=capture();edge(ord('a'),True);time.sleep(.4);held=capture();edge(ord('a'),False);time.sleep(.4)
-                quiet=quiet+1 if not changed(before.crop((210,610,460,805)),held.crop((210,610,460,805))) else 0
+                quiet=quiet+1 if not raised(before) and not raised(held) else 0
             edge(ord('x'),False);time.sleep(.3)
             assert quiet==3,'held nudge never locked the flipper'
             tilted=capture();tilted.save(out/'tilt.png')
-            edge(ord('a'),True);time.sleep(.4);blocked=capture();edge(ord('a'),False)
-            assert not changed(tilted.crop((210,610,460,805)),blocked.crop((210,610,460,805))),'tilt did not disable flipper'
+            edge(ord('a'),True)
+            try:
+                until=time.monotonic()+1.5
+                while time.monotonic()<until:
+                    time.sleep(.05);blocked=capture()
+                    if raised(blocked):
+                        blocked.save(out/'tilt-held.png')
+                        raise AssertionError('tilt did not disable flipper')
+                blocked.save(out/'tilt-held.png')
+            finally:edge(ord('a'),False)
             # A second F2 skips the original engine's startup light show.
             key(0xffbf);time.sleep(1);key(0xffbf);time.sleep(1)
             empty=launcher(capture());until=time.monotonic()+40
@@ -81,11 +106,8 @@ with tempfile.TemporaryDirectory(prefix='arcade-nudge-') as tmp:
                 if changed(empty,launcher(capture())):break
             else:raise AssertionError('Reset game did not feed a ball')
             reset=capture();reset.save(out/'reset.png');edge(ord('a'),True)
-            until=time.monotonic()+8;working=capture()
-            while not changed(reset.crop((210,610,460,805)),working.crop((210,610,460,805))) and time.monotonic()<until:
-                time.sleep(.15);working=capture()
+            wait_flipper(True).save(out/'reset-raised.png')
             edge(ord('a'),False)
-            assert changed(reset.crop((210,610,460,805)),working.crop((210,610,460,805))),'new game did not restore flipper'
             assert app.poll() is None
             key(ord('q'),True);app.wait(timeout=10);assert app.returncode==0
             print('PASS native tilt flipper lock and new-game recovery',flush=True)
