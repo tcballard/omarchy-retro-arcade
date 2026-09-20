@@ -25,14 +25,16 @@ with tempfile.TemporaryDirectory(prefix='arcade-freeski-') as tmp:
         w=found[0];time.sleep(.5);x.XSetInputFocus(display,w,1,0);x.XFlush(display);time.sleep(.3)
         return app,w
     def read():return json.loads(save.read_text())
-    def wait_phase(phase, action):
-        deadline=time.monotonic()+5
+    def wait_state(predicate, action, timeout=5):
+        deadline=time.monotonic()+timeout
         while True:
             observed=read()
-            if observed['run']['phase']==phase:return observed
+            if predicate(observed):return observed
             assert app.poll() is None, (action, variant, 'app exited', app.returncode)
-            assert time.monotonic()<deadline, (action, variant, observed['run'])
+            assert time.monotonic()<deadline, (action, variant, observed)
             time.sleep(.05)
+    def wait_phase(phase, action):
+        return wait_state(lambda state:state['run']['phase']==phase, action)
     def capture(name):
         attr=WindowAttributes();x.XGetWindowAttributes(display,w,C.byref(attr))
         ImageGrab.grab(xdisplay=os.environ['DISPLAY']).crop((attr.x,attr.y,attr.x+attr.width,attr.y+attr.height)).save(out/(name+'.png'))
@@ -102,8 +104,19 @@ with tempfile.TemporaryDirectory(prefix='arcade-freeski-') as tmp:
                 time.sleep(.3);assert read()==loaded
                 if fixture == 'chase-active':
                     before=loaded
-                    key(0xff0d);key(ord('f'));time.sleep(.8);key(0xff1b)
-                    loaded=read()
+                    key(0xff0d);wait_phase('Running', 'resume chase')
+                    key(ord('f'))
+                    wait_state(lambda state:state['run']['fast_mode'], 'enable chase fast mode')
+                    # The save is a checkpoint, not live telemetry. Wait for
+                    # persisted simulation progress (normally every 300 ticks)
+                    # before pausing, rather than assuming .8 s delivered frames.
+                    def chase_progress(state):
+                        assert state['run']['phase']=='Running', ('chase interrupted', variant, before, state)
+                        return (state['run']['ticks']>before['run']['ticks']
+                                and state['run']['distance']>before['run']['distance']
+                                and state['chase']['position']!=before['chase']['position'])
+                    wait_state(chase_progress, 'chase progress checkpoint', timeout=12)
+                    key(0xff1b);loaded=wait_phase('Paused', 'pause chase')
                     assert loaded['run']['phase']=='Paused'
                     assert loaded['run']['fast_mode']
                     assert loaded['run']['distance']>before['run']['distance']
@@ -182,6 +195,14 @@ with tempfile.TemporaryDirectory(prefix='arcade-freeski-') as tmp:
         app,w=launch();capture('save-error');key(0xff0d);key(ord('q'),True);app.wait(timeout=8)
         assert save.read_text()=='future-save-do-not-replace'
         print(f'PASS: FreeSki {variant}: visible start, steering handover, pause/focus/help isolation, one-window switching, reopen and invalid-save retention.',flush=True)
+    except BaseException:
+        # Keep the actual save and screen when CI fails; a bare assertion cannot
+        # distinguish stale checkpoints, a safety pause and a simulation defect.
+        if save.exists():(out/'failure-save.json').write_bytes(save.read_bytes())
+        if app.poll() is None:
+            try:capture('failure')
+            except Exception:pass
+        raise
     finally:
         if app.poll() is None:app.kill();app.wait()
 x.XCloseDisplay(display)

@@ -235,3 +235,25 @@ Local checks: Python source compilation and git diff whitespace check passed.
 Native execution was not run locally because this environment has no Xvfb or
 built Arcade binary; the updated push and pull-request workflows must provide
 that evidence. This is not additional hands-on Omarchy/Wayland acceptance.
+
+### PR #53: installed chase checkpoint synchronization (2026-09-20)
+
+On `fd5b7dd`, PR workflow 35520470566 passed the complete native job, including
+Pinball tilt/recovery and all four FreeSki layouts, plus the headless job. The
+Arch job built and installed the package, then failed FreeSki's `chase-active`
+distance assertion after a fixed 0.8-second delay. No failed Arch save or screen
+was retained, so the exact interrupted state cannot be reconstructed.
+
+The chase check now observes Running and fast-mode checkpoints, then waits up to
+12 seconds for a saved tick advance, greater distance and creature movement
+before issuing pause. It fails on an unexpected phase; it does not retry resume,
+change the fixture or weaken movement/save equality assertions. Failure saves
+and screenshots are retained by the script and uploaded by the Arch job.
+
+Local evidence on Linux x86_64 with Rust 1.98.1: Python source compilation and
+`git diff --check` passed. The production `completion-evidence` example generated
+the chase fixture. A headless continuation with the restored heading and fast
+mode reached its first checkpoint from tick 1412 to 1500, distance
+1181.4018089773822 to 1275.2773054499376, with a changed creature position and
+Running phase. Native and package validation of this change belongs to the new
+CI commit; this is not additional Omarchy/Wayland acceptance.
