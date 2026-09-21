@@ -1,10 +1,24 @@
-# v0.4.0 release preparation
+# v0.4.0 publication record
 
 FreeSki adds the fourteenth game. The tested candidate is
 `7d6e5f42b2e451ea08649eca577675990e58e9d8`, tree
 `22ec5860c18f05743069bfb36f581e490ab362eb`.
 The host/platform, focus/input, audio-worker and Pinball shutdown changes are
 merged. All 18 local Cargo packages and the Arch package agree on 0.4.0.
+
+## Published 21 September 2026
+
+[v0.4.0 is published](https://github.com/tcballard/omarchy-retro-arcade/releases/tag/v0.4.0)
+at the verified candidate below, with all five original CI bundle files.
+Published asset digests match the locally checked files. PR #54 supplied updated
+release-page copy; its documentation commit is not the binary's tag target.
+
+Tom reported testing on his Omarchy XPS: “looks awesome (works really well)”,
+and explicitly approved release. This is human-reported acceptance. Exact OS
+version, individual cases and screenshots were not supplied in this thread;
+no additional coverage is inferred. Full old-version upgrade/rollback and
+ARM support remain unverified. The checklist below is retained as preparation
+history, not outstanding publication authorization.
 
 ## Verified candidate
 
@@ -50,7 +64,7 @@ The bundle's RELEASE-NOTES.md is the original build-time copy. Keep its bytes
 and checksum intact. Use [the revised release-page copy](v0.4.0.md) for the GitHub
 release description; it includes the gameplay image and contributor credit.
 
-## Final desktop check
+## Historical desktop checklist
 
 Historical FreeSki gameplay approval is preserved in
 [PLAYTESTS.md](../../games/freeski/docs/PLAYTESTS.md), scoped to the earlier build.
@@ -78,7 +92,7 @@ The full old-version upgrade/rollback matrix and aarch64 remain unverified.
 A package downgrade does not undo save migration; retain backups and current
 files. Uninstalling the package should preserve state directories.
 
-## Publication handoff
+## Historical publication handoff
 
 No v0.4.0 tag or public release existed when checked on 21 September.
 

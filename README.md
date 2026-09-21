@@ -14,33 +14,32 @@ A collection of classic games for Omarchy. Play pinball, cards, puzzles and arca
 
 Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048 · Shatter · Tanks · Minesweeper · FreeSki
 
-**v0.3.0 for x86_64 Omarchy.** Thirteen games, now including Minesweeper.
-[Download v0.3.0](https://github.com/tcballard/omarchy-retro-arcade/releases/tag/v0.3.0)
+**v0.4.0 for x86_64 Omarchy.** Fourteen games, now including FreeSki.
+[Download v0.4.0](https://github.com/tcballard/omarchy-retro-arcade/releases/tag/v0.4.0)
 for the player package, matching source, checksums and current testing limitations.
-This source revision prepares **v0.4.0**, adding FreeSki as the fourteenth game.
-The release candidate is not published yet; [release preparation](docs/releases/PREPARATION.md).
 
-Minesweeper adds three difficulties, safe first reveal, mouse/keyboard play and resumable boards. [Controls and development status](games/minesweeper/README.md).
+FreeSki brings a Practice slope, endless skiing with optional yeti pursuit, and a five-course Slalom Cup. [Controls](games/freeski/README.md) · [Release notes](docs/releases/v0.4.0.md).
 
 ## Install
 
-1. Open the [v0.3.0 release](https://github.com/tcballard/omarchy-retro-arcade/releases/tag/v0.3.0).
-2. Download `omarchy-retro-arcade-0.3.0-1-x86_64.pkg.tar.zst` and `SHA256SUMS` into the same directory.
+1. Open the [v0.4.0 release](https://github.com/tcballard/omarchy-retro-arcade/releases/tag/v0.4.0).
+2. Download `omarchy-retro-arcade-0.4.0-1-x86_64.pkg.tar.zst` and `SHA256SUMS` into the same directory.
 3. Verify and install:
 
 ```sh
 sha256sum --ignore-missing --check SHA256SUMS
-sudo pacman -U ./omarchy-retro-arcade-0.3.0-1-x86_64.pkg.tar.zst
+sudo pacman -U ./omarchy-retro-arcade-0.4.0-1-x86_64.pkg.tar.zst
 ```
 
 Open **Omarchy Arcade** from your app launcher. Click a game and **Play**, or double-click its title. You can also select with the arrow keys and press `Enter`. Click **Arcade** (or press `Ctrl+H`) to return; **Full screen** and `F11` toggle fullscreen, and `Ctrl+Q` quits. See the [mouse controls and per-game input guide](docs/MOUSE-SUPPORT.md).
 
-The v0.3.0 package includes thirteen games and a bundled Stockfish engine for Chess. It replaces conflicting standalone game packages while retaining their existing save files and settings. The app works offline and needs no account.
+The v0.4.0 package includes fourteen games and a bundled Stockfish engine for Chess. It replaces conflicting standalone game packages while retaining their existing save files and settings. The app works offline and needs no account.
 
 The release supports **x86_64** and includes the checked player package, matching
 application/Stockfish source, build identity and SHA-256 checksums. Release assets are prepared only after automated native and Arch checks pass
-on the versioned source commit. Live Omarchy/Wayland
-audio and gameplay acceptance and aarch64 remain unverified; see the release notes.
+on the versioned source commit. The release candidate was also tested on Tom’s
+Omarchy XPS. The full old-version upgrade/rollback matrix and aarch64 remain
+unverified; see the release notes.
 This is a community app, not an official Omarchy package.
 
 Debug symbols are optional and remain available from the matching CI build.
