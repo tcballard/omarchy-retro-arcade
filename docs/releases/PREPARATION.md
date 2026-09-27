@@ -1,114 +1,83 @@
-# v0.4.0 publication record
+# v0.5.0 release preparation
 
-FreeSki adds the fourteenth game. The tested candidate is
-`7d6e5f42b2e451ea08649eca577675990e58e9d8`, tree
-`22ec5860c18f05743069bfb36f581e490ab362eb`.
-The host/platform, focus/input, audio-worker and Pinball shutdown changes are
-merged. All 18 local Cargo packages and the Arch package agree on 0.4.0.
+Ridgeline (issue #11) adds the fifteenth game. The v0.4.0 publication record
+is in this file's history at `e6912dfd8ac85463ed532b7a99a709340511eb17`.
 
-## Published 21 September 2026
+This revision bumps all 19 local Cargo packages and the Arch package to 0.5.0.
+It also adds the [release-page copy](v0.5.0.md). **There is no verified
+candidate yet.** The release is cut from `main` after the Ridgeline branch
+merges, as v0.4.0 was.
 
-[v0.4.0 is published](https://github.com/tcballard/omarchy-retro-arcade/releases/tag/v0.4.0)
-at the verified candidate below, with all five original CI bundle files.
-Published asset digests match the locally checked files. PR #54 supplied updated
-release-page copy; its documentation commit is not the binary's tag target.
+## Status on 27 September 2026
 
-Tom reported testing on his Omarchy XPS: “looks awesome (works really well)”,
-and explicitly approved release. This is human-reported acceptance. Exact OS
-version, individual cases and screenshots were not supplied in this thread;
-no additional coverage is inferred. Full old-version upgrade/rollback and
-ARM support remain unverified. The checklist below is retained as preparation
-history, not outstanding publication authorization.
+| Gate | State |
+| --- | --- |
+| Ridgeline feature branch CI | Green on earlier branch commits: [run 175](https://github.com/tcballard/omarchy-retro-arcade/actions/runs/36315234995) at `574e577` and [run 176](https://github.com/tcballard/omarchy-retro-arcade/actions/runs/36334623319) at `c65daa4`. Native, Arch and Tanks-engine jobs all passed. This evidence does not transfer to later commits. |
+| Review and merge to `main` | Not started; no PR open |
+| CI on the merged `main` commit, with a release artifact | Pending; this is the candidate |
+| Bundle identity and checksum check | Pending; see below |
+| Omarchy desktop acceptance | Pending (Tom) |
+| Tag and publish | Not authorized |
 
-## Verified candidate
+Local checks for this preparation: the version bump only changes version
+fields; `Cargo.lock` agrees on 0.5.0 for every local package. Ridgeline's own
+local verification is in
+[its verification record](../../games/ridgeline/docs/VERIFICATION.md).
 
-[Run 35525789201](https://github.com/tcballard/omarchy-retro-arcade/actions/runs/35525789201)
-completed successfully on 20 September 2026 at that exact commit:
+## Steps
 
-- Native: formatting, strict Clippy, workspace tests with Stockfish, FreeSki
-  headless tests, fourteen-game switching, FreeSki controls/resume/layouts,
-  mouse navigation, Pinball controls/resize and the other game checks.
-- Arch: complete package build, install verification, installed FreeSki evidence,
-  same-package save preservation and release asset/checksum preparation.
-- Tanks engine: engine tests, Clippy and shared-platform/headless boundaries.
+1. **Merge.** Open a PR from the Ridgeline branch, review, and merge to `main`
+   once CI is green on its head.
+2. **Choose the candidate.** Take the merged `main` commit whose
+   *Arcade build and package* run succeeded in all three jobs. Record its
+   commit, tree, run ID and the `release-v0.5.0-x86_64` artifact ID here.
+3. **Verify the bundle** as for v0.4.0:
+   - `sha256sum --check SHA256SUMS` passes for all four files;
+   - `BUILD.txt` commit and tree match the candidate;
+   - `.PKGINFO` reads `omarchy-retro-arcade`, `0.5.0-1`, `x86_64`;
+   - the corresponding source archive matches `git archive` of the candidate;
+   - the pinned Stockfish source and evaluation network are present.
 
-These are existing CI results inspected on 21 September, not fresh local runtime
-tests. The current preparation changes documentation only; they do not transfer
-that evidence to a new source commit.
-
-On 21 September the release ZIP was downloaded and independently checked:
-
-- Artifact `10609568524`, `release-v0.4.0-x86_64`, SHA-256
-  `6c3a159cd38e9bea7fb3e5127e33028829c64807fbe9c43ded85eb6962352269`.
-- `sha256sum --check SHA256SUMS`: all four files passed.
-- BUILD.txt commit/tree match the candidate above; workflow attempt is 1.
-- `.PKGINFO`: `omarchy-retro-arcade`, `0.4.0-1`, `x86_64`.
-- The corresponding application archive's members, file bytes, modes and
-  symlinks match `git archive` of that commit. Local gzip bytes differ from CI;
-  the embedded archive itself matches BUILD.txt's recorded SHA-256.
-- Pinned Stockfish source and evaluation network are included.
-
-Verification ran with Python 3, git, GNU tar/zstd and sha256sum on Linux x86_64.
-No local Rust build or Omarchy desktop playtest was run in this preparation.
-
-### Bundle checksums
-
-```text
-b1cdf89277f9172e550370463c79b10d59f0815f7cda707ee5867920bb6c2cf6  BUILD.txt
-3cca0c09c3a812ffc95658e577b1a9c317792906012dfceca956f2105ffaa626  RELEASE-NOTES.md
-33fba0ba9da1edf9a81f9989cba6811ddbfc5f0f99ce73d3a2f8e340bf12323a  omarchy-retro-arcade-0.4.0-1-x86_64.pkg.tar.zst
-aebee600ef6674a7f007c8f9f3adb358efd9723d6d31636af8edc8fe88f4cc35  omarchy-retro-arcade-0.4.0-corresponding-source.tar.gz
-```
-
-The bundle's RELEASE-NOTES.md is the original build-time copy. Keep its bytes
-and checksum intact. Use [the revised release-page copy](v0.4.0.md) for the GitHub
-release description; it includes the gameplay image and contributor credit.
-
-## Historical desktop checklist
-
-Historical FreeSki gameplay approval is preserved in
-[PLAYTESTS.md](../../games/freeski/docs/PLAYTESTS.md), scoped to the earlier build.
-Final-package desktop acceptance remains unresolved. On the Omarchy XPS:
-
-1. Close Arcade and back up existing game state using [save locations](../MIGRATION.md).
-2. Download the verified [release artifact](https://github.com/tcballard/omarchy-retro-arcade/actions/runs/35525789201/artifacts/10609568524)
-   and extract it. From that directory run:
+   Record the four checksums here.
+4. **Desktop acceptance on the Omarchy XPS.** Close Arcade and back up
+   `~/.local/state`. Then:
 
    ```sh
    sha256sum --check SHA256SUMS
-   sudo pacman -U ./omarchy-retro-arcade-0.4.0-1-x86_64.pkg.tar.zst
+   sudo pacman -U ./omarchy-retro-arcade-0.5.0-1-x86_64.pkg.tar.zst
    omarchy-version
    omarchy-retro-arcade --version
-   omarchy-retro-arcade --game freeski
+   omarchy-retro-arcade --game ridgeline
    ```
 
-3. Play Free Ski with keyboard and mouse; toggle F, brake, pause, close and reopen.
-   Confirm the run resumes paused and held input does not survive focus loss.
-4. Return to Arcade and switch games. Check sound stops when leaving a game,
-   and Pinball closes normally. Reopen existing saves and check records/settings.
-5. Record hardware, exact Omarchy version, package checksum and observed results.
+   - Play at least First Terrace on Normal by mouse. Try the keyboard path too:
+     1–4, arrows, Enter, U, Space, F and Esc.
+   - Pause mid-wave, build while paused, press Ctrl+H, reopen, and quit and
+     relaunch. The wave should resume paused and exactly as it was.
+   - Switch to light and dark Omarchy themes during play.
+   - Check that sound stops when leaving the game, Pinball still closes
+     normally, and an existing FreeSki/Solitaire save still opens.
+   - Note pacing and difficulty impressions. They feed
+     [balance](../../games/ridgeline/docs/BALANCE.md), not this release gate.
+   - Record hardware, exact Omarchy version, package checksum and results.
+5. **Publish only when authorized.**
+   - Tag **the exact candidate commit**, not a moving `main`, as `v0.5.0`.
+   - Upload the five original bundle files unchanged.
+   - Use [v0.5.0.md](v0.5.0.md) as the page description, removing its
+     candidate sentence.
+   - If a newer commit is chosen instead, use that commit's own CI bundle and
+     repeat step 3. Never pair a newer tag with older assets.
+6. **After publication**, update README's download/install section from 0.4.0
+   to 0.5.0 and its released game count from fourteen to fifteen.
 
-The full old-version upgrade/rollback matrix and aarch64 remain unverified.
-A package downgrade does not undo save migration; retain backups and current
-files. Uninstalling the package should preserve state directories.
+To rebuild locally, use a clean checkout and `packaging/build-arch.sh`, then
+`packaging/prepare-release.sh dist/arch dist/release/v0.5.0`. Debug symbols
+are a separate CI artifact. Official Omarchy package promotion and signing
+remain separate operations.
 
-## Historical publication handoff
+## Known limitations to state at release
 
-No v0.4.0 tag or public release existed when checked on 21 September.
-
-1. Finish and record the focused desktop check above.
-2. Publish the reviewed candidate only when authorized. Tag **the exact commit
-   above**, not a moving main branch, and upload the five original bundle files.
-   Documentation updates in this PR can supply the release-page description
-   without changing the tested binary or its corresponding source.
-3. If choosing a newer source commit instead, use its own successful CI bundle
-   and repeat identity/checksum checks. Never pair a newer tag with these assets.
-4. Remove candidate wording from the release-page copy only after the gates are
-   satisfied. Keep the original bundled notes identified as build-time notes.
-5. After publication, change README's download/install version from 0.3.0 to
-   0.4.0 and its released game count from thirteen to fourteen.
-
-To rebuild, use a clean checkout and `packaging/build-arch.sh`, then
-`packaging/prepare-release.sh dist/arch dist/release/v0.4.0`.
-Debug symbols are a separate CI artifact. Official Omarchy package promotion
-and signing remain separate operations.
+- Ridgeline's balance comes from a reference strategy, not human playtesting.
+  The Hard tables on the early maps may be forgiving.
+- Hands-on Ridgeline acceptance on Omarchy/Wayland is the remaining gate.
+- The full old-version upgrade/rollback matrix and aarch64 are unverified.

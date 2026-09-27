@@ -41,6 +41,7 @@ is not used to consume dialog controls. No generic game-modal API is introduced.
 | Shatter | Suspend clears pending launch, controls and clock; stops audio. | Persists resumable state; owned audio cleanup. |
 | Tanks | Suspend clears aiming/movement state and AI search; stops audio. | Persists match/presentation state; owned audio cleanup. |
 | Minesweeper | Playing board pauses; elapsed clock checks focus and input gate. | Flushes exact board and records; no audio process. |
+| Ridgeline | Running wave pauses on blur/input gate; clears pending placement and clock; stops audio. | Persists exact battle, progress and preferences; owned audio worker dropped. |
 
 The host's Active destructor still calls on_exit once and destroys the game before
 releasing its save lock. It does not force every game through suspend on exit:

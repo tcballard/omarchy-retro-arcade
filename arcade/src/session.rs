@@ -87,6 +87,17 @@ impl ArcadeGame for omarchy_minesweeper::app::App {
         self.set_input_enabled(enabled);
     }
 }
+impl ArcadeGame for omarchy_ridgeline::app::App {
+    fn suspend(&mut self) {
+        self.suspend();
+    }
+    fn set_input_enabled(&mut self, enabled: bool) {
+        self.set_input_enabled(enabled);
+    }
+    fn finished(&mut self) -> bool {
+        omarchy_ridgeline::app::App::finished(self)
+    }
+}
 impl ArcadeGame for omarchy_2048::app::App {}
 impl ArcadeGame for omarchy_chess::ui::ChessApp {}
 impl ArcadeGame for omarchy_solitaire::app::SolitaireApp {}
@@ -145,6 +156,7 @@ impl Active {
             Game::Minesweeper => Box::new(omarchy_minesweeper::app::App::new()?),
             Game::Tanks => Box::new(omarchy_tanks::app::App::new()),
             Game::Shatter => Box::new(omarchy_shatter::app::App::new()),
+            Game::Ridgeline => Box::new(omarchy_ridgeline::app::App::new()),
             Game::TwentyFortyEight => Box::new(omarchy_2048::app::App::new()?),
             Game::FreeSki => Box::new(omarchy_freeski::app::App::new()?),
             Game::Chess => {

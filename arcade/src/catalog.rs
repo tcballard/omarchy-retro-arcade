@@ -17,9 +17,10 @@ pub(crate) enum Game {
     Shatter,
     Tanks,
     Minesweeper,
+    Ridgeline,
 }
 impl Game {
-    pub(crate) const ALL: [Self; 14] = [
+    pub(crate) const ALL: [Self; 15] = [
         Self::Pinball,
         Self::Solitaire,
         Self::Scram,
@@ -34,6 +35,7 @@ impl Game {
         Self::Tanks,
         Self::Minesweeper,
         Self::FreeSki,
+        Self::Ridgeline,
     ];
     pub(crate) fn id(self) -> &'static str {
         match self {
@@ -51,6 +53,7 @@ impl Game {
             Self::Tanks => "tanks",
             Self::Minesweeper => "minesweeper",
             Self::Shatter => "shatter",
+            Self::Ridgeline => "ridgeline",
         }
     }
     pub(crate) fn name(self) -> &'static str {
@@ -69,6 +72,7 @@ impl Game {
             Self::Tanks => "Tanks",
             Self::Minesweeper => "Minesweeper",
             Self::Shatter => "Shatter",
+            Self::Ridgeline => "Ridgeline",
         }
     }
     pub(crate) fn line(self) -> &'static str {
@@ -87,6 +91,7 @@ impl Game {
             Self::Tanks => "Read the wind. Change the landscape.",
             Self::Minesweeper => "Read the field. Trust your next move.",
             Self::Shatter => "Find your angle. Break through.",
+            Self::Ridgeline => "Hold the pass. Spend every credit well.",
         }
     }
     pub(crate) fn image(self) -> egui::ImageSource<'static> {
@@ -98,6 +103,7 @@ impl Game {
             Self::Minesweeper => egui::include_image!("../../games/minesweeper/docs/shelf.svg"),
             Self::Tanks => egui::include_image!("../../games/tanks/shelf.svg"),
             Self::Shatter => egui::include_image!("../../games/shatter/docs/shelf.svg"),
+            Self::Ridgeline => egui::include_image!("../../games/ridgeline/docs/shelf.png"),
             Self::TwentyFortyEight => egui::include_image!("../../games/2048/docs/shelf.svg"),
             Self::FreeSki => egui::include_image!("../../games/freeski/assets/shelf.png"),
             Self::Chess => egui::include_image!("../../games/chess/docs/preview.png"),
