@@ -579,3 +579,31 @@ network access is added. Existing game order, saves and artwork are unchanged.
   four native variants, the capture loop, and a suspended-wave byte-identity
   check across the Arch package reinstall. Hands-on Omarchy/Wayland
   playtesting is still required before issue #11 is complete.
+
+## Ridgeline presentation pass (27 September 2026)
+
+Tom asked for a full UX pass. The rules, save schema, replays and host
+integration are unchanged. The frontend now has:
+
+- a Ridgeline interface kit (`src/ui.rs`): cards, chips, keycaps, focusable
+  painted buttons, segmented speed control, toggles, stat bars, base-health
+  pips and medal emblems;
+- a HUD strip with wave progress, base health and credits, plus a live wave
+  status block while a wave runs;
+- build cards with cost and shortfall, an inspector with upgrade deltas, a
+  placement preview and a threat summary for the next wave;
+- a campaign screen with map thumbnails, per-difficulty medals and a
+  continue banner;
+- designed result and modal screens.
+
+Board art moved to mesa plateaus with cliff faces, curbed roads, cave spawns,
+fortified gates, turrets that rotate toward targets and enemies oriented along
+their route. Custom widgets keep keyboard focus and Enter/Space activation,
+and expose accessible names. All art stays original vector geometry and
+theme-derived, with light and dark palettes.
+
+Clock change: hitches up to one second now run at most a quarter-second of
+ordinary ticks and drop the rest. Only longer gaps pause. Pausing on every
+250 ms hitch was disruptive, and it made the native check flaky under software
+rendering. Determinism is unaffected, because ticks are never skipped or
+scaled.

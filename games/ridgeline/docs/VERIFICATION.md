@@ -49,6 +49,28 @@ The native script drives the real binary under Xvfb through XTest. It checks:
 Screenshots are in `screenshots/`. The 200% capture is downscaled by half for
 the repository.
 
+## Presentation pass (27 September 2026)
+
+The interface was redesigned: HUD strip, build and inspector cards, wave
+preview, campaign map picker with thumbnails and medals, result screen,
+modals, and board art. The rules, save format and replays are unchanged.
+
+| Check | Result |
+| --- | --- |
+| Ridgeline tests after the redesign | Pass: 28 unit + 2 replay tests |
+| Workspace strict Clippy and fmt | Pass |
+| `native-ridgeline.py` dark, light, compact, 200% | Pass. Dark then passed six further consecutive runs after the hitch fix below. |
+| `native-mouse.py`, fifteen games | Pass |
+
+The dark native run failed once during the pass. Cause: the heavier scene
+made one software-rendered Xvfb frame exceed 250 ms. The old clock treated
+that as a stall and auto-paused, and the test's Escape then resumed the game.
+Frame hitches up to one second now run at most a quarter-second of ticks and
+drop the rest. Only longer gaps pause. The replay test now includes a 0.6 s
+frame and still produces identical battles. Headless measurement: under 1 ms
+of CPU per frame for layout and tessellation, about 34,000 vertices for a
+busy Last Pass wave.
+
 Note: in this container, eframe's built-in `--screenshot` readback produced
 uniform grey images for every game, including existing ones. The captures above
 use X11 window grabs, as the native scripts do. CI's `--screenshot` loop is

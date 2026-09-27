@@ -58,6 +58,9 @@ Leaving the window pauses a running wave. Resuming is always an explicit action.
   Shots already in flight keep their original damage, including after a sale.
 - 2× runs twice as many ordinary 60 Hz ticks per second. It never doubles
   damage or skips a tick.
+- If a frame is delayed by up to a second, the game runs at most a quarter
+  second of ticks and drops the rest, so the defence slows briefly instead of
+  jumping ahead. Longer gaps, such as a suspend, pause the game.
 
 Tower, enemy, map and wave data, the Hard table and the balance evidence are in
 [docs/BALANCE.md](docs/BALANCE.md).
