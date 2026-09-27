@@ -517,3 +517,65 @@ and intercepts native close and Ctrl+Q until cleanup completes. Screenshot exit
 uses the same path. A later quit request upgrades return-home intent. Preserve
 on_exit/game/lock destruction order and keep synchronous Drop as a forced-teardown
 fallback. No engine/physics/save-format change; native acceptance remains separate.
+
+## Ridgeline tower defence (issue #11, 27 September 2026)
+
+Tom approved the tower-defence genre. "Ridgeline" is the provisional title; the
+directory, crate (`omarchy-ridgeline`), game id and save name follow it and can
+be renamed before release. It is an ordinary Rust library under
+`games/ridgeline`, appended as the fifteenth shelf entry through the existing
+`ArcadeGame` lifecycle. No executable, desktop entry, package, service or
+network access is added. Existing game order, saves and artwork are unchanged.
+
+- The engine is UI-free and integer-exact: 60 Hz ticks, 1,000 units per cell,
+  integer square roots, and slow/progress arithmetic in hundredths. There is no
+  randomness, so the save needs no RNG. Tick order is fixed and documented:
+  spawns, movement/exits, projectiles by launch order, towers by build order,
+  then results. Defeat takes precedence over a same-tick final clear.
+- Rules follow the issue's proposed defaults:
+  - fixed routes, and designated terrace for building;
+  - manual wave start and a next-wave preview;
+  - fixed armour reduction with a minimum of 1 damage;
+  - Cryo slows take the strongest active tier, and each tier refreshes its own timer;
+  - least-remaining-distance targeting with spawn-order ties;
+  - one bounty per kill and a fixed wave award;
+  - floor(70%) refunds;
+  - upgrades keep the remaining reload, and in-flight shots keep their snapshot, even after a sale;
+  - direct shots never retarget and fizzle if the target is gone;
+  - mortar shells commit to a lead point and splash there regardless.
+  Remaining projectiles are discarded when a wave ends, and tower reloads reset
+  between waves. 2× runs twice as many ordinary ticks.
+- Ten authored maps teach roads, scouts, air, armour, splash and mixed routes in
+  that order. Each has one Normal wave table. Hard is a documented derivation of
+  it: +30% units per group (rounded up), rising extra health, 90% credits and a
+  smaller wave award. Tower behaviour is never changed by difficulty. Map data
+  is validated at load and in tests.
+- Balance evidence is a transparent planner (`src/strategy.rs`) that only issues
+  ordinary commands and reads visible previews. It rehearses budget styles on a
+  copy of the production engine before committing. Its winning command lists
+  for all 20 map/difficulty pairs are checked-in replays, verified at 1× and
+  2×. The live game never calls the planner. Human pacing and difficulty
+  remain open.
+- One versioned `omarchy-retro-arcade/ridgeline.json` holds three logically
+  separate parts: progress/medals, preferences and the exact active battle. It
+  uses the shared private atomic write and a bounded read. Medals and unlocks
+  are awarded once through a `recorded` flag. Unreadable, invalid, incompatible
+  and future files remain untouched and disable writes until explicit
+  archive-and-reset. Saved waves always reopen paused; saves happen on every
+  command, wave boundary, pause, focus loss, shelf exit and close, and every 15
+  seconds.
+- Controls follow #6: full mouse play, with keyboard 1–4, arrows, Enter, U,
+  Space, F and Escape. Escape cancels a pending placement before it pauses.
+  Pointer and keyboard share one cursor; a resting pointer does not move it.
+  Pointer clicks surrender widget focus so Space/Enter return to gameplay.
+  Building, upgrading and selling are allowed while paused.
+- Art is original egui geometry: terraced canyon cells, etched roads, and
+  distinct tower and enemy silhouettes. Air, armour, slow and placement
+  validity are also shown by shape, symbol or text, never by colour alone.
+  Colours derive from the Omarchy theme, with a light-theme palette. The shelf
+  image is a cropped native capture. Sound is original synthesized PCM through
+  the shared session-owned player, which is dropped on pause and exit.
+- Evidence: CI adds headless dependency and test checks, strategy evidence,
+  four native variants, the capture loop, and a suspended-wave byte-identity
+  check across the Arch package reinstall. Hands-on Omarchy/Wayland
+  playtesting is still required before issue #11 is complete.

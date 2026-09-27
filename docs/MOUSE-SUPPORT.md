@@ -24,6 +24,7 @@ Each game keeps its own settings and help. There is no new shared settings store
 | 2048 | Click direction buttons or drag across the board | New game, undo, pause/resume, Help, preferences and continue after reaching 2048. |
 
 | FreeSki | Move over the snow to steer; right mouse brakes | Start, mode/course selection, fast mode, brake, pause/resume, Settings and Help. |
+| Ridgeline | Pick a tower, click open terrace to place; click a tower to inspect; right-click cancels | Maps/difficulty, Start wave, Pause/Resume, Speed, Restart, Upgrade, Sell, Settings, Help and recovery. |
 
 The shared actions are mouse-accessible; this is not a promise that every game is entirely mouse-playable. Rebinding a keyboard control still requires pressing the replacement key. Future games should provide suitable mouse gameplay and clickable common actions from the outset.
 
@@ -47,3 +48,7 @@ Automated egui input tests and X11 native checks are separate from an actual Oma
 ### Minesweeper
 
 Left-click reveals; right-click flags; clicking a revealed number or middle-clicking chords. Arrow keys move the focus, Space reveals, F flags and C chords. Esc pauses. Menus hide the board and suspend the timer.
+
+### Ridgeline
+
+The mouse and keyboard share one board cursor. Choose a tower in the Build list or with 1–4, then click open terrace or press Enter. Right-click or Escape cancels placement; Escape pauses only when nothing is pending. Click a tower, or press Enter over it, to inspect it; Upgrade and Sell are buttons (U also upgrades). Clicks on the Build list, toolbar or panels never reach the board beneath. A resting pointer does not move the cursor, so keyboard movement is never overridden.

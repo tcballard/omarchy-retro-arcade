@@ -4,7 +4,7 @@
 
 <a href="https://github.com/tcballard/omarchy-badges"><img src="https://raw.githubusercontent.com/tcballard/omarchy-badges/75975e5b5bf75e7ede3764bcd2950046f7abfe2c/badges/v1/omarchy-app.svg" height="20" alt="Omarchy App community badge"></a>
 
-**Fourteen games. One native app. One more go.**
+**Fifteen games. One native app. One more go.**
 
 A collection of classic games for Omarchy. Play pinball, cards, puzzles and arcade games in one native window, with offline play, local saves and an interface that follows your desktop theme.
 
@@ -12,13 +12,15 @@ A collection of classic games for Omarchy. Play pinball, cards, puzzles and arca
 
 ![Omarchy Arcade's opening collection, with a full Pinball preview and all nine games in the selector](docs/polish/shelf.png)
 
-Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048 · Shatter · Tanks · Minesweeper · FreeSki
+Circuit Pinball · Solitaire · Scram · Invaders · Chess · Stack · Snake · Bubble · Blast · 2048 · Shatter · Tanks · Minesweeper · FreeSki · Ridgeline
 
 **v0.4.0 for x86_64 Omarchy.** Fourteen games, now including FreeSki.
 [Download v0.4.0](https://github.com/tcballard/omarchy-retro-arcade/releases/tag/v0.4.0)
 for the player package, matching source, checksums and current testing limitations.
 
 FreeSki brings a Practice slope, endless skiing with optional yeti pursuit, and a five-course Slalom Cup. [Controls](games/freeski/README.md) · [Release notes](docs/releases/v0.4.0.md).
+
+Ridgeline, a ten-map tower-defence campaign, is in the source build and not yet in a published release. [Controls and rules](games/ridgeline/README.md).
 
 ## Install
 
@@ -90,7 +92,7 @@ PRs, issues and playtesting are encouraged. [Report a bug, suggest an improvemen
 See [architecture and lifecycle contracts](docs/ARCHITECTURE.md) for host boundaries and planned improvements.
 
 - `arcade/`: the Rust app, collection shelf and local Pinball transport.
-- `games/`: fourteen ordinary game directories, including [FreeSki](games/freeski/README.md), preserving all imported Git history.
+- `games/`: fifteen ordinary game directories, including [FreeSki](games/freeski/README.md), preserving all imported Git history.
 - `packaging/`: one Arch package, icon and desktop entry.
 - `scripts/`: shared build, staging and verification entry points.
 - `shared/platform/`: shared palette loading and file primitives, with optional theme support.
@@ -98,7 +100,7 @@ See [architecture and lifecycle contracts](docs/ARCHITECTURE.md) for host bounda
 - `shared/leaderboard/`: optional background HTTP transport.
 - `services/leaderboard/`: separately deployable replay-validation service; no public endpoint is bundled.
 
-Thirteen Rust games draw directly into the shared window. Pinball retains the upstream C++ physics engine in a private worker whose rendering appears in that same window, including on Wayland. No browser, X11 child-window embedding or separate game launcher is used.
+Fourteen Rust games draw directly into the shared window. Pinball retains the upstream C++ physics engine in a private worker whose rendering appears in that same window, including on Wayland. No browser, X11 child-window embedding or separate game launcher is used.
 
 Existing save paths remain authoritative. Pinball preserves high scores and settings, but does not resume unfinished tables. The other games save when returning to Arcade.
 
@@ -115,5 +117,7 @@ optional creature pursuit and five Slalom courses, with medals, original sound,
 carving, braking, jumps, crash recovery, separate records and suspended runs. [Controls and milestone status](games/freeski/README.md).
 
 Shatter is an original brick breaker: 20 authored levels, mouse/keyboard play, three power-ups, campaign saves and unlocked-level practice. [Controls and verification](games/shatter/README.md). Hands-on Omarchy acceptance is pending.
+
+Ridgeline is an original tower-defence campaign: ten authored maps with Normal and Hard wave tables, four towers with two upgrade tiers, five enemy roles including aircraft, mouse and keyboard play, 1×/2× speed and exactly resumable waves. A reference strategy wins every map and difficulty through the production engine. [Controls and rules](games/ridgeline/README.md) · [balance](games/ridgeline/docs/BALANCE.md) · [verification](games/ridgeline/docs/VERIFICATION.md). Hands-on Omarchy playtesting is pending.
 
 Tanks is an artillery preview with solo Easy/Normal AI, local two-player matches, destructible hills and resumable matches. [Controls and current limitations](games/tanks/HELP.md). Includes original sound cues, animated impacts and settling, aiming aids and reduced effects. Hands-on Omarchy acceptance remains pending; [polish verification](games/tanks/VERIFICATION.md).
