@@ -71,15 +71,20 @@ with tempfile.TemporaryDirectory(prefix='arcade-ridgeline-') as tmp:
             assert placed['credits'] == before['credits'] - 50
             capture('mouse-built')
             mouse(round(10 + (target[0] + .5) * 48.4), round(175 + (target[1] + .5) * 48.4))
-            # The inspector's actions sit below the four shop cards.
-            mouse(1075, 710)
-            upgraded = battle()
-            assert upgraded['towers'][-1]['tier'] == 1, 'mouse did not upgrade'
+            # The fixture has 66 credits: sell the new Cannon before upgrading
+            # an existing tier-one Cannon. The inspector is below the shop.
             mouse(1210, 710)
             sold = battle()
             assert len(sold['towers']) == len(before['towers']), 'mouse did not sell'
-            assert sold['credits'] == before['credits'] - 95 + 66
+            assert sold['credits'] == before['credits'] - 50 + 35
             capture('mouse-sold')
+            candidate = next(t for t in before['towers'] if t['tier'] == 0)
+            mouse(round(10 + (candidate['x'] + .5) * 48.4), round(175 + (candidate['y'] + .5) * 48.4))
+            mouse(1075, 710)
+            upgraded = battle()
+            assert next(t for t in upgraded['towers'] if t['id'] == candidate['id'])['tier'] == 1, 'mouse did not upgrade'
+            assert upgraded['credits'] == sold['credits'] - 45
+            capture('mouse-upgraded')
             quit(app)
             subprocess.run([fixture, '1', '3', '0', str(save)], check=True)
         app, w = launch(); capture('waiting')
