@@ -9,3 +9,5 @@ pub mod battle;
 pub mod data;
 pub mod storage;
 pub mod strategy;
+#[cfg(feature = "desktop")]
+mod ui;
