@@ -44,6 +44,10 @@ with tempfile.TemporaryDirectory(prefix='arcade-ridgeline-') as tmp:
         raise AssertionError(('title', title, value))
     def quit(app):
         key(ord('q'), True); app.wait(timeout=10); assert app.returncode == 0, ('exit status', app.returncode)
+    def mouse(px, py, button=1):
+        xt.XTestFakeMotionEvent(display, -1, px, py, 0); x.XFlush(display); time.sleep(.1)
+        xt.XTestFakeButtonEvent(display, button, 1, 0); x.XFlush(display); time.sleep(.06)
+        xt.XTestFakeButtonEvent(display, button, 0, 0); x.XFlush(display); time.sleep(.25)
     app, w = launch()
     try:
         # A fresh campaign opens on the map list; closing writes an empty campaign.
@@ -55,6 +59,29 @@ with tempfile.TemporaryDirectory(prefix='arcade-ridgeline-') as tmp:
         before = battle(); assert before['phase'] == 'Waiting' and before['wave'] == 2
         occupied = {(t['x'], t['y']) for t in before['towers']}
         target = next(c for c in [(10, 6), (10, 5), (11, 6), (8, 5), (8, 6), (11, 5), (3, 5), (2, 6), (16, 6), (16, 7)] if c not in occupied)
+        if variant == 'dark':
+            # Exercise the real pointer path at the standard 1280x900 layout.
+            # The engine-level egui test also checks mouse placement at other sizes.
+            app, w = launch()
+            mouse(1100, 254)  # Cannon card in the right rail.
+            mouse(round(10 + (target[0] + .5) * 48.4), round(175 + (target[1] + .5) * 48.4))
+            placed = battle()
+            assert len(placed['towers']) == len(before['towers']) + 1, 'mouse did not build'
+            assert (placed['towers'][-1]['x'], placed['towers'][-1]['y']) == target
+            assert placed['credits'] == before['credits'] - 50
+            capture('mouse-built')
+            mouse(round(10 + (target[0] + .5) * 48.4), round(175 + (target[1] + .5) * 48.4))
+            # The inspector's actions sit below the four shop cards.
+            mouse(1075, 710)
+            upgraded = battle()
+            assert upgraded['towers'][-1]['tier'] == 1, 'mouse did not upgrade'
+            mouse(1210, 710)
+            sold = battle()
+            assert len(sold['towers']) == len(before['towers']), 'mouse did not sell'
+            assert sold['credits'] == before['credits'] - 95 + 66
+            capture('mouse-sold')
+            quit(app)
+            subprocess.run([fixture, '1', '3', '0', str(save)], check=True)
         app, w = launch(); capture('waiting')
         assert before['credits'] >= 50, before['credits']
         # Keyboard placement: 1 selects Cannon, arrows move the shared cursor, Enter builds.

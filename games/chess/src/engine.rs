@@ -290,7 +290,10 @@ pub fn search(
     }
     let mut p = Process::spawn(path)?;
     p.send("uci", cancel)?;
-    let options = p.until("uciok", Duration::from_secs(3), cancel)?;
+    // Loading Stockfish's evaluation network can exceed the move deadline on
+    // a busy package builder. Keep the handshake bounded independently of play.
+    const STARTUP_TIMEOUT: Duration = Duration::from_secs(10);
+    let options = p.until("uciok", STARTUP_TIMEOUT, cancel)?;
     let (skill, millis) = difficulty.settings();
     for (name, value) in [("Threads", 1), ("Hash", 32), ("Skill Level", skill as u64)] {
         if options
@@ -302,7 +305,7 @@ pub fn search(
     }
     p.send("ucinewgame", cancel)?;
     p.send("isready", cancel)?;
-    p.until("readyok", Duration::from_secs(3), cancel)?;
+    p.until("readyok", STARTUP_TIMEOUT, cancel)?;
     p.send(&game.uci_position(), cancel)?;
     p.send(&format!("go movetime {millis}"), cancel)?;
     let reply = p.until("bestmove", Duration::from_millis(millis + 3000), cancel)?;

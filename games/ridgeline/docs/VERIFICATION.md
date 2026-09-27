@@ -88,6 +88,14 @@ unaffected.
 - Audio playback on a real desktop. Cue PCM validity and owned-player shutdown
   are unit-tested.
 
+## PR #56 review follow-up
+
+The native Ridgeline Xvfb check now also uses pointer clicks at the standard
+1280×900 layout to build, select, upgrade and sell a Cannon, checking the
+saved tower and credit changes after each action. This extends the existing
+egui mouse test to the packaged window path. It does not replace completing a
+map by hand with a mouse on Omarchy/Wayland.
+
 ## Second presentation pass (27 September 2026)
 
 The board and incoming-wave strip now form one centred block, and the cabinet
