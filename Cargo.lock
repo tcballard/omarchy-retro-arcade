@@ -2697,12 +2697,25 @@ dependencies = [
  "omarchy-freeski",
  "omarchy-invaders",
  "omarchy-minesweeper",
+ "omarchy-ridgeline",
  "omarchy-scram",
  "omarchy-shatter",
  "omarchy-snake",
  "omarchy-solitaire",
  "omarchy-stack",
  "omarchy-tanks",
+ "tempfile",
+]
+
+[[package]]
+name = "omarchy-ridgeline"
+version = "0.4.0"
+dependencies = [
+ "arcade-platform",
+ "arcade-presentation",
+ "eframe",
+ "serde",
+ "serde_json",
  "tempfile",
 ]
 
