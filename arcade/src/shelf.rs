@@ -19,6 +19,7 @@ impl Game {
             Self::Tanks => "ARTILLERY / SOLO + LOCAL",
             Self::Minesweeper => "PUZZLE / THREE DIFFICULTIES",
             Self::Shatter => "ARCADE / BRICK BREAKER",
+            Self::Ridgeline => "STRATEGY / TOWER DEFENCE",
         }
     }
     fn crop(self) -> Rect {
@@ -38,6 +39,7 @@ impl Game {
             Self::Tanks => ([0., 0.], [1., 1.]),
             Self::Minesweeper => ([0., 0.], [1., 1.]),
             Self::Shatter => ([0., 0.], [1., 1.]),
+            Self::Ridgeline => ([0., 0.], [1., 1.]),
         };
         Rect::from_min_max(Pos2::from(a), Pos2::from(b))
     }

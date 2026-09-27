@@ -31,5 +31,7 @@ omarchy-tanks = { path = "../games/tanks", features = ["desktop"] }
 
 omarchy-minesweeper = { path = "../games/minesweeper" }
 
+omarchy-ridgeline = { path = "../games/ridgeline" }
+
 [dev-dependencies]
 tempfile = "3"

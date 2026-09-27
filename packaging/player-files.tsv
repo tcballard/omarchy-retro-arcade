@@ -41,3 +41,6 @@ games/minesweeper/README.md	share/doc/omarchy-retro-arcade/minesweeper/README.md
 games/minesweeper/LICENSE	share/licenses/omarchy-retro-arcade/minesweeper/LICENSE
 games/minesweeper/VERIFICATION.md	share/doc/omarchy-retro-arcade/minesweeper/VERIFICATION.md
 games/minesweeper/verification.sha256	share/doc/omarchy-retro-arcade/minesweeper/verification.sha256
+games/ridgeline/README.md	share/doc/omarchy-retro-arcade/ridgeline/README.md
+games/ridgeline/LICENSE	share/licenses/omarchy-retro-arcade/ridgeline/LICENSE
+games/ridgeline/THIRD_PARTY.md	share/licenses/omarchy-retro-arcade/ridgeline/THIRD_PARTY.md
