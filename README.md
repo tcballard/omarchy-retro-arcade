@@ -20,7 +20,7 @@ for the player package, matching source, checksums and current testing limitatio
 
 FreeSki brings a Practice slope, endless skiing with optional yeti pursuit, and a five-course Slalom Cup. [Controls](games/freeski/README.md) · [Release notes](docs/releases/v0.4.0.md).
 
-Ridgeline, a ten-map tower-defence campaign, is in the source build and not yet in a published release. [Controls and rules](games/ridgeline/README.md).
+This source revision prepares **v0.5.0**, adding Ridgeline, a ten-map tower-defence campaign, as the fifteenth game. It is not published yet; see [release preparation](docs/releases/PREPARATION.md) and [draft release notes](docs/releases/v0.5.0.md).
 
 ## Install
 
