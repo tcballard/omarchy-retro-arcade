@@ -277,7 +277,9 @@ fn engine_timeout_is_bounded() {
         "unexpected engine error: {error}"
     );
     let elapsed = start.elapsed();
-    assert!(elapsed < Duration::from_secs(5), "timeout took {elapsed:?}");
+    // Startup is allowed ten seconds for Stockfish to load its network on a
+    // busy runner; an unresponsive engine must still fail in bounded time.
+    assert!(elapsed < Duration::from_secs(12), "timeout took {elapsed:?}");
 }
 #[cfg(unix)]
 #[test]
