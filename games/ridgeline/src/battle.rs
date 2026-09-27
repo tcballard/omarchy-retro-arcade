@@ -582,19 +582,26 @@ impl Battle {
 }
 
 /// Converts real elapsed time to whole ticks; 2× runs twice as many ordinary ticks.
+///
+/// A frame hitch up to one second runs at most a quarter-second of ticks and
+/// drops the rest, so the defence briefly slows rather than jumping ahead.
+/// Longer gaps (suspend, a hung compositor) pause instead.
 #[derive(Clone, Debug, Default)]
 pub struct Clock {
     remainder: f64,
 }
+pub const MAX_FRAME: f64 = 0.25;
+pub const STALL: f64 = 1.0;
 impl Clock {
     pub fn reset(&mut self) {
         self.remainder = 0.;
     }
     pub fn advance(&mut self, seconds: f64, speed: u32) -> Result<u32, &'static str> {
-        if !seconds.is_finite() || !(0. ..=0.25).contains(&seconds) {
+        if !seconds.is_finite() || !(0. ..=STALL).contains(&seconds) {
             self.remainder = 0.;
             return Err("Rendering stalled, so the defence paused. Resume when ready.");
         }
+        let seconds = seconds.min(MAX_FRAME);
         self.remainder += seconds * f64::from(TICKS_PER_SECOND) * f64::from(speed.clamp(1, 2));
         let ticks = (self.remainder + 1e-9).floor();
         self.remainder -= ticks;
@@ -1039,11 +1046,13 @@ mod tests {
             assert_eq!(b, reference, "{fps} fps at {speed}x");
         }
         let mut clock = Clock::default();
+        // Hitches slow the defence (at most 15 ticks at 1×); long gaps pause.
+        assert_eq!(clock.advance(0.5, 1), Ok(15));
+        assert_eq!(clock.advance(0.9, 2), Ok(30));
         assert_eq!(
-            clock.advance(0.5, 1),
+            clock.advance(1.5, 1),
             Err("Rendering stalled, so the defence paused. Resume when ready.")
         );
-        assert!(clock.advance(1., 1).is_err());
         let ticks: u32 = (0..60).map(|_| clock.advance(1. / 60., 2).unwrap()).sum();
         assert_eq!(ticks, 120);
     }

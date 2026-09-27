@@ -46,7 +46,7 @@ fn replays_are_identical_at_double_speed_and_uneven_frames() {
         let reference = replay.run().unwrap();
         let mut b = Battle::new(replay.map, replay.difficulty);
         let mut clock = Clock::default();
-        let frames = [1. / 30., 1. / 144., 1. / 61., 0.2, 1. / 240.];
+        let frames = [1. / 30., 1. / 144., 1. / 61., 0.2, 0.6, 1. / 240.];
         let mut f = 0;
         let mut commands = replay.commands.iter().peekable();
         loop {
