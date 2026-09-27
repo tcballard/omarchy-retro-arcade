@@ -46,9 +46,9 @@ impl Palette {
             Self {
                 light,
                 ground: [
-                    mix(rgb(196, 150, 108), bg, 0.30),
-                    mix(rgb(212, 170, 126), bg, 0.30),
-                    mix(rgb(226, 190, 148), bg, 0.30),
+                    mix(rgb(186, 134, 92), bg, 0.18),
+                    mix(rgb(212, 164, 116), bg, 0.18),
+                    mix(rgb(234, 198, 152), bg, 0.18),
                 ],
                 cliff: rgb(150, 104, 72),
                 rock: rgb(128, 102, 86),
@@ -79,11 +79,11 @@ impl Palette {
             Self {
                 light,
                 ground: [
-                    mix(rgb(70, 46, 34), bg, 0.20),
-                    mix(rgb(92, 62, 44), bg, 0.20),
-                    mix(rgb(116, 80, 56), bg, 0.20),
+                    mix(rgb(78, 48, 34), bg, 0.10),
+                    mix(rgb(114, 74, 48), bg, 0.10),
+                    mix(rgb(152, 104, 66), bg, 0.10),
                 ],
-                cliff: rgb(42, 28, 22),
+                cliff: rgb(40, 25, 19),
                 rock: rgb(58, 48, 44),
                 rock_lit: rgb(104, 88, 78),
                 road: rgb(34, 28, 25),
@@ -325,6 +325,7 @@ pub fn terrain(p: &Painter, v: View, map: &Map, index: usize, pal: &Palette) {
             }
         }
     }
+    sunlight(p, v.rect, pal);
     lanes(p, v, map, pal);
     for route in &map.routes {
         let start = v.pt(route.points[0]);
@@ -353,7 +354,16 @@ fn roads(p: &Painter, v: View, map: &Map, pal: &Palette) {
         .ground_routes()
         .map(|(_, r)| r.points.iter().map(|q| v.pt(*q)).collect())
         .collect();
-    // Layered strokes with round joins: curb, bed, then worn ruts.
+    // Cast shadow, then layered strokes with round joins: curb, bed, worn ruts.
+    let shadow = Vec2::new(c * 0.05, c * 0.09);
+    for pts in &ground {
+        for w in pts.windows(2) {
+            p.line_segment(
+                [w[0] + shadow, w[1] + shadow],
+                Stroke::new(c, Color32::from_black_alpha(60)),
+            );
+        }
+    }
     for (width, colour) in [(0.96, pal.curb), (0.8, pal.road)] {
         for pts in &ground {
             for w in pts.windows(2) {
@@ -538,18 +548,28 @@ pub fn tower_icon(
     } else {
         Vec2::new(0., -1.)
     };
-    let plate = Rect::from_center_size(c, Vec2::splat(s * 1.62));
+    let plate = Rect::from_center_size(c, Vec2::splat(s * 1.7));
+    let hue = kind_colour(kind, pal);
+    p.circle_filled(c, s * 1.18, hue.gamma_multiply(0.14));
     p.rect_filled(
         plate.translate(Vec2::new(s * 0.1, s * 0.16)),
         s * 0.22,
         Color32::from_black_alpha(90),
     );
     p.rect_filled(plate, s * 0.22, pal.metal);
+    // Kind colour on the rim and a lit top edge: each role reads at a glance.
     p.rect_stroke(
         plate,
         s * 0.22,
-        Stroke::new((s * 0.07).max(1.), BRASS.gamma_multiply(0.85)),
+        Stroke::new((s * 0.09).max(1.2), hue),
         egui::StrokeKind::Inside,
+    );
+    p.line_segment(
+        [
+            plate.left_top() + Vec2::new(s * 0.3, s * 0.14),
+            plate.right_top() + Vec2::new(-s * 0.3, s * 0.14),
+        ],
+        Stroke::new((s * 0.05).max(0.8), Color32::from_white_alpha(50)),
     );
     for corner in [
         plate.left_top(),
@@ -1071,4 +1091,38 @@ pub fn thumbnail(p: &Painter, v: View, map: &Map, index: usize, pal: &Palette) {
         c * 1.5,
         Color32::from_black_alpha(if pal.light { 30 } else { 90 }),
     );
+}
+
+/// Signature colour per tower role, used on rims, glows and cards.
+pub fn kind_colour(kind: TowerKind, pal: &Palette) -> Color32 {
+    let c = match kind {
+        TowerKind::Cannon => Color32::from_rgb(232, 188, 104),
+        TowerKind::Mortar => Color32::from_rgb(228, 114, 76),
+        TowerKind::Flak => Color32::from_rgb(118, 176, 236),
+        TowerKind::Cryo => Color32::from_rgb(116, 214, 236),
+    };
+    if pal.light {
+        c.lerp_to_gamma(Color32::BLACK, 0.3)
+    } else {
+        c
+    }
+}
+
+/// Low sun from the upper left: warm light fading to shadow at lower right.
+pub fn sunlight(p: &Painter, r: Rect, pal: &Palette) {
+    let warm = if pal.light {
+        Color32::from_white_alpha(40)
+    } else {
+        Color32::from_rgba_unmultiplied(255, 220, 170, 22)
+    };
+    let shade = Color32::from_black_alpha(if pal.light { 30 } else { 70 });
+    let clear = Color32::TRANSPARENT;
+    let mut mesh = Mesh::default();
+    mesh.colored_vertex(r.left_top(), warm);
+    mesh.colored_vertex(r.right_top(), clear);
+    mesh.colored_vertex(r.right_bottom(), shade);
+    mesh.colored_vertex(r.left_bottom(), clear);
+    mesh.add_triangle(0, 1, 2);
+    mesh.add_triangle(0, 2, 3);
+    p.add(Shape::mesh(mesh));
 }

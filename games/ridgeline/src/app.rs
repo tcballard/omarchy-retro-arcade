@@ -851,23 +851,13 @@ impl App {
             ui::section(ui, "INSPECT", Some("U upgrade"), pal);
             self.inspector(ui, &b, &t, interactive, pal);
         } else {
-            ui::section(ui, "COMMAND", None, pal);
-            idle_tips(ui, pal);
+            ui.add_space(4.);
+            ui.label(
+                egui::RichText::new("Choose a tower with 1–4 or its card, then place it on open terrace. Click a tower on the board to inspect, upgrade or sell it.")
+                    .font(ui::text(12.))
+                    .color(pal.muted),
+            );
         }
-        let wave = b.preview();
-        let (title, hint) = match b.phase {
-            Phase::Waiting => (
-                format!("INCOMING · WAVE {}", b.wave + 1),
-                "Space to start".to_string(),
-            ),
-            Phase::Running => (
-                format!("WAVE {} · ON FIELD", b.wave + 1),
-                format!("{} to come", wave.spawns.len() - b.spawned),
-            ),
-            _ => (format!("FINAL WAVE {}", b.wave + 1), String::new()),
-        };
-        ui::section(ui, &title, Some(&hint), pal);
-        incoming(ui, wave, pal);
     }
 
     fn tower_card(
@@ -896,6 +886,12 @@ impl App {
         ui::card(p, r, pal, response.hovered() && interactive, chosen);
         let well = Rect::from_min_size(r.min + Vec2::new(8., 7.), Vec2::splat(46.));
         p.rect_filled(well, 3., pal.surface.lerp_to_gamma(pal.ink, 0.25));
+        p.rect_stroke(
+            well,
+            3.,
+            Stroke::new(1_f32, art::kind_colour(kind, pal).gamma_multiply(0.7)),
+            egui::StrokeKind::Inside,
+        );
         art::tower_icon(p, well.center(), 40., kind, 0, pal, Vec2::new(0.7, -0.7));
         let dim = if short > 0 { 0.55 } else { 1. };
         p.text(
@@ -944,8 +940,9 @@ impl App {
         );
         ui::coin(p, cost - Vec2::new(g.size().x + 9., 0.), 5., pal);
         if short > 0 {
+            // Beside the hotkey, clear of the role chips at any width.
             p.text(
-                cost - Vec2::new(g.size().x + 18., 0.),
+                Pos2::new(r.right() - 30., r.top() + 16.),
                 Align2::RIGHT_CENTER,
                 format!("need {short}"),
                 ui::mono(9.5),
@@ -1118,10 +1115,37 @@ impl App {
 
     fn board(&mut self, ui: &mut egui::Ui, pal: &Palette) {
         arcade_presentation::backdrop(ui);
+        // Quiet the cabinet in play so the board carries the eye.
+        ui.painter().rect_filled(
+            ui.max_rect(),
+            0.,
+            if pal.light {
+                Color32::from_white_alpha(70)
+            } else {
+                Color32::from_black_alpha(120)
+            },
+        );
         let Some(b) = self.save.battle.clone() else {
             return;
         };
-        let view = View::fit(ui.available_rect_before_wrap().shrink(16.));
+        // Board and incoming-wave strip form one block, centred in the space.
+        let avail = ui.available_rect_before_wrap();
+        const STRIP: f32 = 56.;
+        const GAP: f32 = 24.;
+        let fit = View::fit(
+            Rect::from_min_max(avail.min, avail.max - Vec2::new(0., STRIP + GAP)).shrink(16.),
+        );
+        let block = fit.rect.height() + GAP + STRIP;
+        let top = (avail.center().y - block / 2.).max(avail.top() + 16.);
+        let view = View {
+            rect: Rect::from_min_size(Pos2::new(fit.rect.left(), top), fit.rect.size()),
+            cell: fit.cell,
+        };
+        let strip = Rect::from_min_size(
+            Pos2::new(view.rect.left() - 10., view.rect.bottom() + GAP),
+            Vec2::new(view.rect.width() + 20., STRIP),
+        );
+        incoming_strip(ui, strip, &b, pal);
         self.view = Some(view);
         let response = ui.allocate_rect(view.rect, Sense::click());
         let interactive =
@@ -2100,9 +2124,9 @@ impl App {
             egui::SidePanel::right("ridgeline-side")
                 .resizable(false)
                 .exact_width(if ctx.screen_rect().width() < 1000. {
-                    272.
+                    262.
                 } else {
-                    312.
+                    292.
                 })
                 .frame(
                     egui::Frame::NONE
@@ -2269,29 +2293,6 @@ fn alert(ui: &mut egui::Ui, text: &str, pal: &Palette) {
         });
 }
 
-fn idle_tips(ui: &mut egui::Ui, pal: &Palette) {
-    panel_card(ui, pal, |ui| {
-        for (key, text) in [
-            ("1–4", "Choose a tower to build"),
-            ("Click", "Inspect, upgrade or sell a tower"),
-            ("Space", "Send the next wave"),
-        ] {
-            let (r, _) =
-                ui.allocate_exact_size(Vec2::new(ui.available_width(), 22.), Sense::hover());
-            let p = ui.painter();
-            let kw = ui::keycap(p, Pos2::new(r.left() + 22., r.center().y), key, pal);
-            let _ = kw;
-            p.text(
-                Pos2::new(r.left() + 52., r.center().y),
-                Align2::LEFT_CENTER,
-                text,
-                ui::text(12.5),
-                pal.text,
-            );
-        }
-    });
-}
-
 fn tower_stats(ui: &mut egui::Ui, now: &TowerStats, next: Option<&TowerStats>, pal: &Palette) {
     let rate = |s: &TowerStats| 60. / s.reload as f32;
     let fr = |v: f32, max: f32| v / max;
@@ -2367,78 +2368,97 @@ fn tower_stats(ui: &mut egui::Ui, now: &TowerStats, next: Option<&TowerStats>, p
     }
 }
 
-fn incoming(ui: &mut egui::Ui, wave: &Wave, pal: &Palette) {
-    panel_card(ui, pal, |ui| {
-        let mut threat = 0;
-        for g in &wave.groups {
-            let s = g.kind.stats();
-            threat += s.damage * g.count;
-            let hp = (s.hp * wave.health / 100).max(1);
-            let (r, response) =
-                ui.allocate_exact_size(Vec2::new(ui.available_width(), 38.), Sense::hover());
-            let p = ui.painter();
-            art::enemy_icon(
-                p,
-                r.left_center() + Vec2::new(16., 0.),
-                if g.kind == EnemyKind::Hauler {
-                    12.
-                } else {
-                    10.
-                },
-                g.kind,
-                pal,
-                Vec2::new(1., 0.),
-                0.4,
-            );
-            p.text(
-                r.left_center() + Vec2::new(36., -8.),
-                Align2::LEFT_CENTER,
-                format!("×{}", g.count),
-                ui::mono(15.),
-                pal.text,
-            );
-            p.text(
-                r.left_center() + Vec2::new(78., -8.),
-                Align2::LEFT_CENTER,
-                g.kind.name(),
-                ui::text(13.),
-                pal.text,
-            );
-            let mut x = r.left() + 36.;
-            if s.air {
-                x += ui::chip(p, Pos2::new(x, r.center().y + 10.), "AIR", pal.air, pal) + 4.;
-            }
-            if s.armour > 0 {
-                ui::chip(
-                    p,
-                    Pos2::new(x, r.center().y + 10.),
-                    &format!("ARMOUR {}", s.armour),
-                    BRASS,
-                    pal,
-                );
-            }
-            p.text(
-                r.right_center() + Vec2::new(0., -8.),
-                Align2::RIGHT_CENTER,
-                format!("{hp} hp"),
-                ui::mono(11.5),
-                pal.text,
-            );
-            p.text(
-                r.right_center() + Vec2::new(0., 9.),
-                Align2::RIGHT_CENTER,
-                format!("{} dmg each", s.damage),
-                ui::mono(10.),
-                pal.muted,
-            );
-            response.on_hover_text(g.kind.role());
-        }
-        ui.label(
-            egui::RichText::new(format!("If every unit breaks through: −{threat} base"))
-                .font(ui::text(11.))
-                .color(pal.muted),
+/// The next (or current) wave as one strip beneath the board.
+fn incoming_strip(ui: &egui::Ui, r: Rect, b: &Battle, pal: &Palette) {
+    let p = ui.painter();
+    let wave = b.preview();
+    ui::card(p, r, pal, false, false);
+    let (eyebrow, colour) = match b.phase {
+        Phase::Waiting => ("INCOMING", BRASS),
+        Phase::Running => ("ON FIELD", pal.accent),
+        _ => ("FINAL WAVE", pal.muted),
+    };
+    p.text(
+        r.left_top() + Vec2::new(14., 11.),
+        Align2::LEFT_TOP,
+        eyebrow,
+        ui::mono(10.),
+        colour,
+    );
+    p.text(
+        r.left_bottom() + Vec2::new(14., -10.),
+        Align2::LEFT_BOTTOM,
+        format!("WAVE {:02}", b.wave + 1),
+        ui::mono(17.),
+        pal.text,
+    );
+    let mut x = r.left() + 112.;
+    let mut threat = 0;
+    let compact = r.width() < 760.;
+    for g in &wave.groups {
+        let s = g.kind.stats();
+        threat += s.damage * g.count;
+        let hp = (s.hp * wave.health / 100).max(1);
+        p.line_segment(
+            [
+                Pos2::new(x - 10., r.top() + 10.),
+                Pos2::new(x - 10., r.bottom() - 10.),
+            ],
+            Stroke::new(1_f32, pal.line),
         );
-    });
+        let size = if g.kind == EnemyKind::Hauler { 11. } else { 9. };
+        art::enemy_icon(
+            p,
+            Pos2::new(x + 12., r.center().y),
+            size,
+            g.kind,
+            pal,
+            Vec2::new(1., 0.),
+            0.4,
+        );
+        let head = p.layout_no_wrap(
+            format!("×{} {}", g.count, g.kind.name()),
+            ui::text(13.5),
+            pal.text,
+        );
+        let mut detail = format!("{hp} hp");
+        if s.armour > 0 {
+            detail += &format!(" · armour {}", s.armour);
+        }
+        if s.air {
+            detail += " · air";
+        }
+        let sub = p.layout_no_wrap(
+            detail,
+            ui::mono(if compact { 9. } else { 10. }),
+            if s.air { pal.air } else { pal.muted },
+        );
+        let w = head.size().x.max(sub.size().x);
+        p.galley(
+            Pos2::new(x + 30., r.center().y - head.size().y),
+            head,
+            pal.text,
+        );
+        p.galley(Pos2::new(x + 30., r.center().y + 2.), sub, pal.muted);
+        x += 30. + w + 22.;
+    }
+    let right = r.right() - 14.;
+    if x < right - 120. {
+        p.text(
+            Pos2::new(right, r.center().y - 8.),
+            Align2::RIGHT_CENTER,
+            format!("−{threat}"),
+            ui::mono(16.),
+            pal.bad,
+        );
+        p.text(
+            Pos2::new(right, r.center().y + 10.),
+            Align2::RIGHT_CENTER,
+            "base if all pass",
+            ui::mono(9.),
+            pal.muted,
+        );
+    }
 }
 
 fn help_row(

@@ -87,3 +87,19 @@ unaffected.
   comparison; it was not run locally.
 - Audio playback on a real desktop. Cue PCM validity and owned-player shutdown
   are unit-tested.
+
+## Second presentation pass (27 September 2026)
+
+The board and incoming-wave strip now form one centred block, and the cabinet
+is dimmed during play. Other changes: stronger plateau contrast with low-sun
+lighting, road shadows, kind-coloured tower rims and build cards, and a
+slimmer sidebar. Ridgeline tests (28 unit + 2 replay), strict Clippy and fmt
+pass. `native-ridgeline.py` passes in light, compact and 200%, and dark passed
+21 of 22 runs.
+
+The failing run was on a cold start after a rebuild, during the "resume by
+keyboard" step. That step pressed Escape to resume, waited, then pressed
+Escape again to pause. A first software-GL frame longer than one second
+legitimately stall-pauses the game, so the second Escape resumed it instead.
+The step now resumes, waits and closes; closing saves the exact state. Every
+assertion in the script now names what it checks. Five cold runs then passed.

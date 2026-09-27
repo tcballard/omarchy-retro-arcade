@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix='arcade-ridgeline-') as tmp:
         for _ in range(120):
             found = windows()
             if found and mapped(found[0]): break
-            assert app.poll() is None
+            assert app.poll() is None, 'app exited during launch'
             time.sleep(.1)
         assert len(found) == 1, found
         w = found[0]; time.sleep(.8); x.XSetInputFocus(display, w, 1, 0); x.XFlush(display); time.sleep(.3)
@@ -43,13 +43,13 @@ with tempfile.TemporaryDirectory(prefix='arcade-ridgeline-') as tmp:
             time.sleep(.1)
         raise AssertionError(('title', title, value))
     def quit(app):
-        key(ord('q'), True); app.wait(timeout=10); assert app.returncode == 0
+        key(ord('q'), True); app.wait(timeout=10); assert app.returncode == 0, ('exit status', app.returncode)
     app, w = launch()
     try:
         # A fresh campaign opens on the map list; closing writes an empty campaign.
         capture('maps'); key(0xff1b); key(0x20)
         quit(app)
-        assert read()['battle'] is None
+        assert read()['battle'] is None, 'fresh campaign saved a battle'
         # Production fixture: First Terrace, waiting for wave 3 after the replay's builds.
         subprocess.run([fixture, '1', '3', '0', str(save)], check=True)
         before = battle(); assert before['phase'] == 'Waiting' and before['wave'] == 2
@@ -66,15 +66,15 @@ with tempfile.TemporaryDirectory(prefix='arcade-ridgeline-') as tmp:
         key(ord('h'), True); ready('Omarchy Arcade')
         built = battle()
         assert len(built['towers']) == len(before['towers']) + 1, 'Enter did not build'
-        assert (built['towers'][-1]['x'], built['towers'][-1]['y']) == target
-        assert built['credits'] == before['credits'] - 50
+        assert (built['towers'][-1]['x'], built['towers'][-1]['y']) == target, (built['towers'][-1], target)
+        assert built['credits'] == before['credits'] - 50, 'build cost'
         key(0xff0d); ready('Ridgeline - Omarchy Arcade')
         # Escape cancels a pending placement before any pause; nothing is spent.
         key(ord('2')); key(0xff1b)
         key(0x20); time.sleep(1.2); capture('running')
         key(0xff1b)
         paused = battle(); assert paused['phase'] == 'Running' and paused['tick'] > 0, paused['tick']
-        assert paused['credits'] >= built['credits'] and len(paused['towers']) == len(built['towers'])
+        assert paused['credits'] >= built['credits'] and len(paused['towers']) == len(built['towers']), 'cancelled placement spent credits'
         capture('paused')
         # Paused time, Space and Enter never advance combat.
         time.sleep(.8); key(0x20); key(ord('u'))
@@ -82,19 +82,20 @@ with tempfile.TemporaryDirectory(prefix='arcade-ridgeline-') as tmp:
         assert battle()['tick'] == paused['tick'], 'paused combat advanced'
         key(0xff0d); ready('Ridgeline - Omarchy Arcade'); capture('reopened-paused')
         quit(app)
-        exact = read(); assert exact['battle']['tick'] == paused['tick']
+        exact = read(); assert exact['battle']['tick'] == paused['tick'], 'close changed the paused tick'
         # A new process restores the same in-flight state, paused.
         app, w = launch(); time.sleep(.6); quit(app)
         assert read() == exact, 'reopen changed the saved battle'
-        # Resume by keyboard and let the wave progress in the native window.
-        app, w = launch(); key(0xff1b); time.sleep(1.); key(0xff1b)
-        assert battle()['tick'] > exact['battle']['tick']
+        # Resume by keyboard and let the wave progress; closing saves the exact state.
+        # (A second Escape could meet a legitimate >1 s cold-start stall pause and resume.)
+        app, w = launch(); key(0xff1b); time.sleep(2.)
         quit(app)
+        assert battle()['tick'] > exact['battle']['tick'], 'resumed wave did not advance'
         # Unsupported data is preserved exactly; nothing overwrites it.
         save.write_text('future-save-do-not-replace')
         app, w = launch(); capture('recovery'); key(0x20); key(0xff1b); key(ord('1')); key(0xff0d)
         quit(app)
-        assert save.read_text() == 'future-save-do-not-replace'
+        assert save.read_text() == 'future-save-do-not-replace', 'protected save was overwritten'
         print(f'PASS ({variant}): Ridgeline keyboard build, cancel, start/pause, paused isolation, same-window shelf return, exact reopen, protected save.')
     finally:
         if app.poll() is None: app.kill(); app.wait()

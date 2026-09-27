@@ -607,3 +607,10 @@ ordinary ticks and drop the rest. Only longer gaps pause. Pausing on every
 250 ms hitch was disruptive, and it made the native check flaky under software
 rendering. Determinism is unaffected, because ticks are never skipped or
 scaled.
+
+Second pass: move the incoming-wave preview into a strip under the board,
+using space the width-limited board left empty. Dim the cabinet in play. Give
+each tower role a signature colour (cannon gold, mortar ember, flak sky, cryo
+ice) on board rims and build cards, alongside the existing shape differences.
+Relight terrain with stronger plateau contrast and a low sun from the upper
+left.
