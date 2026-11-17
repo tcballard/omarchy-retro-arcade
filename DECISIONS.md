@@ -517,3 +517,30 @@ and intercepts native close and Ctrl+Q until cleanup completes. Screenshot exit
 uses the same path. A later quit request upgrades return-home intent. Preserve
 on_exit/game/lock destruction order and keep synchronous Drop as a forced-teardown
 fallback. No engine/physics/save-format change; native acceptance remains separate.
+
+## Circuit physics review and Space Cadet proportions (17 November 2026)
+
+User asked for a Pinball review and then for the fixes judged best for a faithful
+build. The upstream collision solver and integrator are unchanged; edits are
+authored table data and Circuit-only gates.
+
+- Open the left outlane at the gap drawn between the island tip post and the
+  divider post; seal the island base. The island cap stays decoration, out of play.
+- Slope every level playable edge (loop floor, plinth rear, left tube-support
+  cap). Add a ball search: a ball rested 6.5 s in open play, off the plunger and
+  with no flipper raised, gets a small kick. This revises the earlier "never
+  rescue production balls" rule for play only; the test runner still fails a
+  ball rested five seconds, before the search can act.
+- Register the tube's force field over its whole deck for the authored table.
+  Imported resources keep the original partial registration.
+- Each accepted nudge costs 0.3 tilt; holding supplies the rest so a rested hold
+  still tilts at 1.75 s. Tapping no longer bypasses tilt.
+- Gravity 25·sin(0.804), drag 0.2 and 40/80 ms flipper strokes: the Space Cadet
+  reference values rescaled by ball radius (0.45 against 0.30). Plunger charges
+  in 50 steps over 1.25 s with the 0.75 s release window unchanged.
+- The right orbit is the shooter lane and cannot be reached from the flippers,
+  so its 1,000 is described as a launch award. No new shot was invented.
+- Not changed: artwork, flipper geometry (the centre gap stays 5.1 ball
+  diameters against Space Cadet's 2.6), bumper and sling strengths, scoring values.
+- Headless evidence only: 21 CTest targets and 80 random-input three-ball games.
+  Hands-on feel, audio and Omarchy desktop acceptance remain open.

@@ -27,6 +27,12 @@ inline bool CheckCircuitNudge(int tick) {
   pb::pause_continue();
   pb::InputDown({InputTypes::Keyboard,SDLK_PERIOD});pb::loose_focus();
   if(!released())return false;
+  // Taps must count toward tilt even though no time is held.
+  nudge::nudge_count=0;
+  for(int tap=0;tap<3;++tap){pb::InputDown({InputTypes::Keyboard,SDLK_x});pb::InputUp({InputTypes::Keyboard,SDLK_x});}
+  if(!released() || std::abs(nudge::nudge_count-3*nudge::CircuitTiltPressCost)>.0001f)return false;
+  if(4*nudge::CircuitTiltPressCost<=1.0f)return false;
+  printf("NUDGE taps accumulate PASS\n");
   printf("NUDGE impulses/release/pause/focus PASS\n");
   nudge::nudge_count=0;pb::InputDown({InputTypes::Keyboard,SDLK_x});
  }

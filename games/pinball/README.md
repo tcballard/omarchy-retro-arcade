@@ -14,7 +14,7 @@ Download an Arch package from a successful [Linux build](https://github.com/tcba
 
 Or run makepkg -si from the checkout's packaging directory. Open Omarchy Space Cadet from the app menu.
 
-A/D operate the flippers. Hold Space, then release to launch. P pauses, Escape pauses, F2 starts a new game, and F11 toggles fullscreen. Controls are configurable in Settings. This table is single-player with three balls. Bumpers score 100; twelve hits complete a 2,500-point circuit. Targets score 250; completing both four-target banks awards 5,000. Orbit shots score 1,000 and reaching the raised ramp’s upper sensor scores 1,500. Slingshots score 25.
+A/D operate the flippers. Hold Space, then release to launch. P pauses, Escape pauses, F2 starts a new game, and F11 toggles fullscreen. Controls are configurable in Settings. This table is single-player with three balls. Bumpers score 100; twelve hits complete a 2,500-point circuit. Targets score 250; completing both four-target banks awards 5,000. A launch carried through the right orbit scores 1,000 and reaching the raised ramp’s upper sensor scores 1,500. Slingshots score 25. Both outlanes lose the ball. Tapping or holding the nudge keys builds toward a tilt. A ball that comes to rest in open play is kicked free after about six seconds.
 
 Settings contains Appearance and Sound. Follow Omarchy uses the active desktop palette for green glass, lamps and UI accents, retaining the artwork’s ivory, chrome and amber materials. Mute controls the synthesized collision effects. Circuit has no background music; that option is disabled. The official logo stays unchanged.
 

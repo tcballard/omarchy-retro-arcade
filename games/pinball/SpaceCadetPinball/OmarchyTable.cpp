@@ -17,8 +17,11 @@
 #include "TRamp.h"
 #include "TBall.h"
 #include "TLine.h"
+#include "TFlipper.h"
+#include "TFlipperEdge.h"
 #include "TEdgeManager.h"
 #include "TTableLayer.h"
+#include "TEdgeBox.h"
 #include <map>
 #include <algorithm>
 
@@ -29,7 +32,7 @@ bool Enabled=false;
 namespace {
 DatFile* data;
 std::vector<int16_t> objects;
-unsigned hits=0;
+unsigned hits=0, searches=0;
 unsigned targetMask=0, orbitCount=0, rampCount=0, circuits=0;
 std::map<std::string,float> flashes, debounce;
 std::string notice="HOLD SPACE TO LAUNCH";
@@ -71,6 +74,14 @@ void line(gdrv_bitmap8* b,float x,float y,float xx,float yy,int c,int width=2){
 }
 void circle(gdrv_bitmap8* b,int cx,int cy,int r,int c){for(int y=-r;y<=r;y++)for(int x=-r;x<=r;x++)if(x*x+y*y<=r*r)pixel(b,cx+x,cy+y,c);}
 float wx(float x){return (x-540)/25;} float wy(float y){return (y-500)/25;}
+// Motion constants follow the Space Cadet reference table, rescaled for this
+// table's larger ball (radius .45 against .30 world units). Space Cadet uses
+// gravity 25*sin(.5) = 11.99 and drag .2; the same fall time measured in ball
+// radii needs 11.99 * 1.5 = 17.98 here, which is 25*sin(.804). Flipper stroke
+// times are the reference values unchanged. The tube keeps its authored extra
+// slope in the same proportion to table gravity as before.
+constexpr float TableTilt=.804f, TableDrag=.2f, RampTilt=.279f;
+constexpr float FlipperExtendSeconds=.04f, FlipperRetractSeconds=.08f;
 
 }
 DatFile* Build(){
@@ -85,7 +96,7 @@ DatFile* Build(){
  auto table=group("table");auto board=bitmap(table,390,416,0,0);
  memset(board->IndexedBmpPtr,10,board->IndexedStride*board->Height);
  floats(table,{600,5,-22,-21,20,-21,20,23,-22,23,-22,-21});
- floats(table,{700,200,208});floats(table,{701,.08f});floats(table,{305,25,.32f,1.5707963f});
+ floats(table,{700,200,208});floats(table,{701,TableDrag});floats(table,{305,25,TableTilt,1.5707963f});
  auto ball=group("ball");floats(ball,{500,.45f});floats(ball,{501,0,0,.45f});auto ballbmp=bitmap(ball,11,11,0,0,false);circle(ballbmp,5,5,5,12);circle(ballbmp,3,3,1,14);
  auto digits=(int)data->Groups.size();
  const int masks[]={63,6,91,79,102,109,125,7,127,111};
@@ -145,7 +156,7 @@ DatFile* Build(){
   float origin=side?720:340,tip=side?598:462;
   auto g=group(side?"flipper_r":"flipper_l");shorts(g,{100,9,300,(int16_t)mat->GroupId});
   floats(g,{800,wx(origin),wy(888),.7f});floats(g,{801,wx(tip),wy(943),.42f});floats(g,{802,wx(tip),wy(820),.42f});
-  floats(g,{803,1});floats(g,{804,.055f});floats(g,{805,.095f});object(g,side?1004:1003);
+  floats(g,{803,1});floats(g,{804,FlipperExtendSeconds});floats(g,{805,FlipperRetractSeconds});object(g,side?1004:1003);
   for(int f=0;f<9;f++){auto state=f?group(nullptr,201):g;bitmap(state,1,1,0,0);}
  }
  for(int i=0;i<4;i++){const auto& bumper=CircuitGeometry::Bumpers()[i];std::string name="bumper"+std::to_string(i);auto g=group(name.c_str());shorts(g,{100,2,300,(int16_t)mat->GroupId,400,(int16_t)kick->GroupId});floats(g,{600,1,wx(bumper.x),wy(bumper.y),bumper.radius/25});floats(g,{407,.12f});object(g,1005);
@@ -167,7 +178,7 @@ DatFile* Build(){
  auto triangle=[&](vector2 a,vector2 b,vector2 c){
   // Rising deck z = (405 - image_y) * .004: the upper bridge
   // clears a ground ball by y=120, and is continuous at the entry.
-  planes.insert(planes.end(),{0,-.10f,-.38f,wx(a.X),wy(a.Y),wx(b.X),wy(b.Y),wx(c.X),wy(c.Y),.12f,1.5707963f,0,0});
+  planes.insert(planes.end(),{0,-.10f,-.38f,wx(a.X),wy(a.Y),wx(b.X),wy(b.Y),wx(c.X),wy(c.Y),RampTilt,1.5707963f,0,0});
  };
  for(size_t i=0;i+1<left.size();++i){triangle(left[i],right[i],right[i+1]);triangle(left[i],right[i+1],left[i+1]);}
  auto pe2=new EntryData();pe2->EntryType=FieldTypes::FloatArray;pe2->FieldSize=planes.size()*sizeof(float);pe2->Buffer=new char[pe2->FieldSize];memcpy(pe2->Buffer,planes.data(),pe2->FieldSize);ramp->AddEntry(pe2);
@@ -222,13 +233,14 @@ const char* InvalidRegion(const TBall* ball){
  for(const auto& wall:CircuitGeometry::RampWalls())if(wall.layers&ball->CollisionMask)
   if(pathDistance(wall.points,x,y)<ball->Radius*25-.3f)return "inside tube rail";
  if(ball->CollisionMask&1){
-  static const auto exitPortal=[] {
+  static const auto portals=[] {
    std::vector<vector2> left,right;CircuitGeometry::RampSides(left,right);
-   return std::vector<vector2>{left.back(),right.back()};
+   return std::vector<std::vector<vector2>>{{left.back(),right.back()},{left.front(),right.front()}};
   }();
-  // TRamp changes to ground exactly on the exit edge; allow only the same
-  // subpixel contact tolerance used by the rail checks, not a ball-wide hole.
-  if(pathDistance(exitPortal,x,y)>.3f)
+  // TRamp changes to ground exactly on a portal edge (the upper exit, or the
+  // lower mouth when a short shot rolls back); allow only the same subpixel
+  // contact tolerance used by the rail checks, not a ball-wide hole.
+  if(pathDistance(portals[0],x,y)>.3f && pathDistance(portals[1],x,y)>.3f)
    for(const auto& body:CircuitGeometry::GroundRampBodies())
     if(inside(body,x,y))return "inside ground tube body";
   for(const auto& bumper:CircuitGeometry::Bumpers())
@@ -277,6 +289,16 @@ bool AuditGeometry(){
    }
   }
  }
+ // The tube's extra slope and drag must act along the whole deck. The
+ // original plane-bounds accumulation registered only part of it.
+ for(auto centre:CircuitGeometry::RampCentres()){
+  auto manager=TTableLayer::edge_manager;
+  const auto& box=manager->BoxArray[manager->box_x(wx(centre.X))+manager->box_y(wy(centre.Y))*manager->MaxBoxX];
+  bool found=false;
+  for(auto field:box.FieldList)if(dynamic_cast<TRamp*>(field->CollisionComp))found=true;
+  if(!found){fprintf(stderr,"RAMP_FIELD_GAP x=%.0f y=%.0f\n",centre.X,centre.Y);return false;}
+ }
+ // The illustrated island is sealed: nothing may pass its base or its top.
  // Independent artwork landmarks catch missing backs, wrongly oriented
  // scoring faces, a closed drain, and a gate that blocks outgoing launches.
  struct Landmark {float x,y,xx,yy;const char* expected;};
@@ -286,7 +308,8 @@ bool AuditGeometry(){
   {700,315,780,315,"module0"},{928,825,928,890,"plunger"},{948,825,948,890,"plunger"},
   {630,80,685,80,"shooter_gate"},{685,80,630,80,nullptr},
   {540,980,540,1040,"drain"},{374,435,374,390,"ramp"},
-  {480,160,438,124,"target_bank"}
+  {480,160,438,124,"target_bank"},
+  {165,600,165,520,"left_island_base"},{240,318,190,318,"left_upper_lane"}
  };
  for(const auto& test:landmarks){
   float dx=test.xx-test.x,dy=test.yy-test.y,len=std::hypot(dx,dy);
@@ -357,6 +380,25 @@ bool AuditGeometry(){
  }
  printf("GEOMETRY_AUDIT %u directional wall/grid probes, %zu landmarks and ramp route passed\n",checked,sizeof(landmarks)/sizeof(landmarks[0]));return true;
 }
+unsigned BallSearches(){return searches;}
+void BallSearch(TBall& ball,int restedMs){
+ // The automated runner fails a ball that rests for five seconds, so this
+ // later kick can never hide a geometry trap from the tests.
+ constexpr int SearchAfterMs=6500;
+ if(restedMs<SearchAfterMs)return;
+ const float x=540+25*ball.Position.X,y=500+25*ball.Position.Y;
+ // A ball waiting on the plunger is not lost.
+ if(y>600 && x>895+(y-667)*15/378)return;
+ // Neither is one the player is holding on a raised flipper.
+ for(auto flipper:pb::MainTable->FlipperList)
+  if(flipper->MessageField || flipper->FlipperEdge->CurrentAngle!=0)return;
+ const float angle=(RandFloat()-.5f)*2.4f;
+ ball.CollisionComp=nullptr;
+ ball.Direction={std::sin(angle),-std::cos(angle),0};
+ ball.Speed=8;
+ ++searches;
+ announce("BALL SEARCH");
+}
 unsigned Progress(){return hits%12;}
 unsigned Targets(){return targetMask;}
 unsigned Orbits(){return orbitCount;}
@@ -379,7 +421,7 @@ void ComponentEvent(MessageCode code,TPinballComponent* c){
   debounce[name]=pb::time_now;flashes[name]=pb::time_now;
   if(dynamic_cast<TBumper*>(c)){sound();t->AddScore(100);if(++hits%12==0){++circuits;t->AddScore(2500);announce("CIRCUIT +2500");}}
   else if(name.size()==7 && name.back()>='0' && name.back()<='3' && (name.compare(0,6,"target")==0||name.compare(0,6,"module")==0)){unsigned bit=unsigned(name.back()-'0')+(name[0]=='m'?4:0);targetMask|=1u<<bit;t->AddScore(250);sound();announce("MODULE +250");if(targetMask==255){t->AddScore(5000);targetMask=0;announce("SYSTEM ONLINE +5000");}}
-  else if(name=="orbit"||name=="orbit_back"){if(!debounce.count("orbit_award")||pb::time_now-debounce["orbit_award"]>2){debounce["orbit_award"]=pb::time_now;++orbitCount;t->AddScore(1000);announce("ORBIT +1000");sound();}}
+  else if(name=="orbit"||name=="orbit_back"){if(!debounce.count("orbit_award")||pb::time_now-debounce["orbit_award"]>2){debounce["orbit_award"]=pb::time_now;++orbitCount;t->AddScore(1000);announce("LAUNCH ORBIT +1000");sound();}}
   else if(name=="ramp_score"||name=="ramp_score_back"){if(!debounce.count("ramp_award")||pb::time_now-debounce["ramp_award"]>3){debounce["ramp_award"]=pb::time_now;++rampCount;t->AddScore(1500);announce("RAMP +1500");sound();}}
   else if(name=="sling_left"||name=="sling_right"){t->AddScore(25);sound();}
  }
@@ -392,6 +434,8 @@ void ComponentEvent(MessageCode code,TPinballComponent* c){
 void Shutdown(){if(effect){Mix_HaltChannel(-1);Mix_FreeChunk(effect);effect=nullptr;}tone.clear();}
 void TableEvent(MessageCode code){
  if(code==MessageCode::StartGamePlayer1)announce("HOLD SPACE TO LAUNCH");
- if(code==MessageCode::NewGame){pb::MainTable->Plunger->PullbackDelay=.10f;pb::MainTable->Plunger->MinimumReleaseDelay=.75f;hits=targetMask=orbitCount=rampCount=circuits=0;over=false;debounce.clear();flashes.clear();announce("HOLD SPACE TO LAUNCH");}
+ if(code==MessageCode::NewGame){// Charge in 50 fine steps over 1.25 seconds instead of nine coarse ones;
+  // the release window is independent of the charge interval.
+  pb::MainTable->Plunger->PullbackDelay=.025f;pb::MainTable->Plunger->PullbackIncrement=2;pb::MainTable->Plunger->MinimumReleaseDelay=.75f;hits=targetMask=orbitCount=rampCount=circuits=0;over=false;debounce.clear();flashes.clear();announce("HOLD SPACE TO LAUNCH");}
 }
 }

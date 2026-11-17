@@ -26,7 +26,12 @@ inline const std::vector<Wall>& Walls() {
         // The divider passes the launcher floor and continues below it. It
         // follows the right orbit to its open exit above the target bank.
         {"shooter_inner", {{910,1045},{895,667},{878,490},{855,355},{842,289},{807,210},{770,165},{720,130},{660,106}}, false,3},
-        {"left_outlane", {{192,550},{203,710},{181,930},{170,1045}}, false,3},
+        // The outlane divider starts at its own post below the island tip; the
+        // gap between the two posts is the outlane entrance shown in the plate.
+        {"left_outlane", {{211,597},{203,710},{181,930},{170,1045}}, false,3},
+        // The illustrated island is a closed plastic. Its base seals the cap
+        // above the outlane, so the decorative cap there is never in play.
+        {"left_island_base", {{192,550},{144,550}}, false,3},
         {"left_inlane", {{300,420},{302,535},{281,724},{291,759},{355,815}}, false,3},
         {"left_return", {{203,771},{330,868}}, false,3},
         {"right_inlane", {{774,432},{768,574},{788,731},{732,788}}, false,3},
@@ -38,11 +43,14 @@ inline const std::vector<Wall>& Walls() {
         {"sling_body_left", {{285,588},{298,574},{359,759},{354,776},{273,727},{285,588}}, true,1},
         {"sling_body_right", {{767,583},{777,580},{789,730},{717,778},{701,764},{767,583}}, true,1},
         // The target plinth ends at its rear edge, NOT at the cabinet roof.
-        // Its shallow rear bevel guides slow balls left into the underpass.
+        // Its rear bevel falls 5-7 degrees to the left so a slow ball rolls
+        // into the underpass instead of creeping along a near-level edge.
         // Gaps between the four uprights are narrower than the ball diameter.
-        {"target_bank", {{401,96},{480,87},{611,82},{611,142},{500,142},{481,153},{438,170},{403,174},{391,133},{401,96}}, true,1},
+        {"target_bank", {{401,104},{480,94},{611,82},{611,142},{500,142},{481,153},{438,170},{403,174},{391,133},{401,104}}, true,1},
         {"module_bank", {{755,267},{810,278},{761,428},{721,414},{755,267}}, true,1},
-        {"left_upper_lane", {{192,550},{184,514},{185,493},{204,469},{248,443},{264,418},{272,383},{263,347},{244,331},{216,331},{193,344}}, false,3},
+        // The loop floor falls to the right along its whole length: a ball
+        // that reaches the closed end rolls back out instead of resting there.
+        {"left_upper_lane", {{192,550},{184,514},{185,493},{204,469},{248,443},{264,418},{272,383},{263,347},{244,333},{216,327},{193,321}}, false,3},
         {"left_upper_return", {{273,472},{293,442},{308,400},{303,356},{288,326},{278,300},{248,291},{225,295},{211,308}}, false,3},
         {"right_bank", {{642,122},{661,116},{696,144},{728,201},{746,231},{746,262},{730,256},{710,209},{676,159},{642,142},{642,122}}, true,1},
     };
@@ -125,6 +133,10 @@ inline std::vector<Wall> RampWalls() {
     std::sort(cuts.begin(),cuts.end());
     for(size_t i=1;i<cuts.size();i+=2)
         result.push_back({"ramp_support_end",{{cuts[i-1],120},{cuts[i],120}},false,1});
+    // The left cap is a level shelf in the rear corner. A sloped shed above
+    // it returns a slow ball to the underpass; the right cap lies beneath
+    // the target plinth and needs none.
+    if(cuts.size()>=2)result.push_back({"ramp_support_shed",{{cuts[0],100},{cuts[1],120}},false,1});
     return result;
 }
 }

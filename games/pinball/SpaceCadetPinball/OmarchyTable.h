@@ -12,6 +12,10 @@ void Shutdown();
 // Read-only real-engine geometry checks used by the authored-table test runner.
 bool AuditGeometry();
 const char* InvalidRegion(const TBall* ball);
+// Ball search for the authored table: after a ball has rested in open play
+// for several seconds, give it a small kick, as a real machine pulses its coils.
+void BallSearch(TBall& ball, int restedMs);
+unsigned BallSearches();
 unsigned Progress();
 unsigned Targets();
 unsigned Orbits();

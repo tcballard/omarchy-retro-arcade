@@ -12,7 +12,7 @@ The integration retains powered bumpers and slings, while stand-up targets and m
 
 ## Verification
 
-The authored-table runner executes the original engine with public authored data and isolated user settings. It audits installed line/circle colliders and their spatial-grid registration from both sides and each declared layer. Independent landmark rays check scoring faces, obstacle backs, launcher corners, gate direction, tube entrance and the drain. A route sweep rejects a tube centreline blocked by its own radius-offset rails. Independent fixtures in `tests/CircuitRouteFixtures.h` also require 18 ground routes to remain clear: shooter, rear orbit, bridge underpass, upper field, right target return, bumper approaches, left loop, both inlanes/outlanes, both sides of the module bank and slings, main field and drain. Each route is checked against installed upstream colliders and sampled for solid-body/ball-radius overlap. Routes stay within their intended local corridor rather than relying on a detour elsewhere in the table. All four circular bumpers receive 64 circumference probes each. Bumper coordinates live in `CircuitGeometry.h`; the upper-right skirt is centred at (617,210), clearing the target return without reducing its radius.
+The authored-table runner executes the original engine with public authored data and isolated user settings. It audits installed line/circle colliders and their spatial-grid registration from both sides and each declared layer. Independent landmark rays check scoring faces, obstacle backs, launcher corners, gate direction, tube entrance and the drain. A route sweep rejects a tube centreline blocked by its own radius-offset rails. Independent fixtures in `tests/CircuitRouteFixtures.h` also require 19 ground routes to remain clear: shooter, rear orbit, bridge underpass, upper field, right target return, bumper approaches, left loop, both inlanes/outlanes, the left outlane entrance, both sides of the module bank and slings, main field and drain. Each route is checked against installed upstream colliders and sampled for solid-body/ball-radius overlap. Routes stay within their intended local corridor rather than relying on a detour elsewhere in the table. All four circular bumpers receive 64 circumference probes each. Bumper coordinates live in `CircuitGeometry.h`; the upper-right skirt is centred at (617,210), clearing the target return without reducing its radius.
 
 During simulated play, checks reject nonfinite coordinates, escape from the actual cabinet or tube footprint, entry into solid bodies, wall/bumper penetration beyond a small numerical tolerance, and five seconds stuck away from the plunger. These checks only report test failures; they do not clamp, teleport or rescue production balls. A strong tube shot must actually transition back to ground at the upper exit. The rear-route regression additionally requires six rear-area shots and three real feed/full-charge launches at different contact phases to actually reach the open field. A ball bouncing indefinitely in a small pocket is a failure even if its speed never falls below the old stuck threshold. The geometry sweep covers 39 trajectories across speeds, directions, lanes and raised sections. It runs one process at a time by default; `OMARCHY_GEOMETRY_WORKERS` is an explicit local opt-in to concurrency.
 
@@ -32,6 +32,25 @@ python3 games/pinball/tests/render_geometry_map.py map.json \
 ```
 
 The optional map tool needs Pillow and produces ground/raised PNG diagrams from the exported data and an optional numbered route map from the independent fixtures; it never modifies the approved artwork. The native pinball test also enables `OMARCHY_CHECK_GEOMETRY=1` in the real worker and plays a variable-time input sequence. A reported violation fails the test; it never repairs the trajectory. The bridge-layer screenshot test independently verifies that a ground ball is occluded while a raised ball remains visible. These checks complement native gameplay, resizing and user playtesting; they do not establish that every possible trajectory or artwork contour is perfect.
+
+## Left island, outlane entrance and resting places
+
+The illustrated island at the left is a closed plastic. Its base runs from the
+tip post to the cabinet, so the cap drawn on it is decoration and is never in
+play. The outlane divider starts at its own post below the tip (artwork
+211,597); the gap between the two posts is the outlane entrance. Earlier the
+divider and the island shared one vertex, which sealed the outlane.
+
+No playable edge is level. The loop floor over the island falls to the right
+along its whole length, the target plinth's rear bevel falls five to seven
+degrees to the left, and a sloped shed covers the level cap behind the left
+tube support. The audit checks the island base, the closed loop end and that
+the tube's force field is registered at every centreline knot.
+
+The five-second trapped-ball failure in the test runner fires before the
+6.5-second production ball search, so the search cannot hide a trap from the
+tests. `authored-play-recovery` waives that failure for one fixture, a ball at
+rest between two bumper skirts, and requires the search to free it.
 
 ## Tube entrance and low supports
 

@@ -75,6 +75,9 @@ TRamp::TRamp(TPinballTable* table, int groupIndex) : TCollisionComponent(table, 
 	auto yMin = 1000000000.0f;
 	auto yMax = -1000000000.0f;
 	auto xMax = -1000000000.0f;
+	// Authored table: true plane bounds. The original accumulation below is
+	// kept for imported resources, whose behaviour depends on it.
+	RectF planeBounds{-1000000000.0f, -1000000000.0f, 1000000000.0f, 1000000000.0f};
 	for (auto index = 0; index < RampPlaneCount; index++)
 	{
 		auto& plane = RampPlane[index];
@@ -84,6 +87,8 @@ TRamp::TRamp(TPinballTable* table, int groupIndex) : TCollisionComponent(table, 
 		yMin = std::min(std::min(std::min(plane.V3.Y, plane.V1.Y), plane.V2.Y), xMin); // Sic
 		xMax = std::max(std::max(std::max(plane.V3.X, plane.V1.X), plane.V2.X), xMin);
 		yMax = std::max(std::max(std::max(plane.V3.Y, plane.V1.Y), plane.V2.Y), xMin);
+		for (auto vertex : {plane.V1, plane.V2, plane.V3})
+			planeBounds.Merge({vertex.X, vertex.Y, vertex.X, vertex.Y});
 		
 		for (auto pt = 0; pt < 3; pt++)
 		{
@@ -126,6 +131,15 @@ TRamp::TRamp(TPinballTable* table, int groupIndex) : TCollisionComponent(table, 
 	auto y1 = yMax;
 	auto x0 = xMin;
 	auto y0 = yMin;
+	if (OmarchyTable::Enabled)
+	{
+		// Register the ramp field over the whole deck, not only the boxes
+		// touched by the final plane.
+		x1 = planeBounds.XMax;
+		y1 = planeBounds.YMax;
+		x0 = planeBounds.XMin;
+		y0 = planeBounds.YMin;
+	}
 	TTableLayer::edges_insert_square(y0, x0, y1, x1, nullptr, &Field);
 }
 

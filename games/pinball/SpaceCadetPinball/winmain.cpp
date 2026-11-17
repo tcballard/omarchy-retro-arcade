@@ -351,6 +351,7 @@ void winmain::MainLoop()
                 for(auto b:pb::MainTable->BallList)if(b->ActiveFlag)printf("FINAL_BALL x=%.3f y=%.3f dx=%.3f dy=%.3f\n",540+b->Position.X*25,500+b->Position.Y*25,b->Direction.X,b->Direction.Y);
                 printf("REAR_EXIT %d\n",int(probeRearExit));
                 printf("UPSTREAM_TABLE ticks=%d score=%d balls=%d ramps=%u orbits=%u targets=%u\n",probeTick,pb::MainTable->CurScore,pb::MainTable->BallCount,OmarchyTable::Ramps(),OmarchyTable::Orbits(),OmarchyTable::Targets());
+                printf("BALL_SEARCHES %u\n",OmarchyTable::BallSearches());
                 if(getenv("OMARCHY_TEST_SHOT") && std::string(getenv("OMARCHY_TEST_SHOT"))=="ramp-complete")printf("RAMP_COMPLETE %d\n",int(probeRampExit));
                 if(getenv("OMARCHY_TEST_SHOT") && std::string(getenv("OMARCHY_TEST_SHOT"))=="plunger")printf("PLUNGER_FULL_LAUNCH %d\n",int(probeFullLaunch));
                 if(getenv("OMARCHY_TEST_SHOT") && std::string(getenv("OMARCHY_TEST_SHOT"))=="plunger-repeat")printf("PLUNGER_RECHARGE %d\n",int(probeChargeMonotonic&&probeFullLaunch));
@@ -399,6 +400,9 @@ void winmain::MainLoop()
                 if(shot=="target"){x=515;y=190;speed=15;}
                 if(shot=="orbit"){x=780;y=145;dx=0;dy=-1;speed=15;}
                 if(shot=="drain"){x=540;y=985;dy=1;speed=15;}
+                // At rest in the notch between two bumper skirts: only the
+                // production ball search can free it.
+                if(shot=="ball-search"){x=573.2f;y=236.8f;dx=0;dy=1;speed=0;}
                 // Near-edge ball in the upper chute must remain inside its raised path.
                 if(shot=="ramp-exit-side"){x=434;y=124;dx=-.37f;dy=-.929f;speed=50.5f;b->CollisionMask=2;}
                 if(shot=="raised-top"){x=353;y=42;speed=60;b->CollisionMask=2;}
@@ -423,7 +427,8 @@ void winmain::MainLoop()
                 const bool inShooter=x>903 && y>830 && y<874;
                 if(probeTick>180 && y>180 && x<800)probeRearExit=true;
                 probeStuckTicks=b->Speed<.5f && !inShooter ? probeStuckTicks+1 : 0;
-                if(probeStuckTicks>600){fprintf(stderr,"TRAPPED_BALL tick=%d x=%.3f y=%.3f mask=%d\n",probeTick,x,y,b->CollisionMask);return_value=2;return;}
+                static const bool searchShot=getenv("OMARCHY_TEST_SHOT") && std::string(getenv("OMARCHY_TEST_SHOT"))=="ball-search";
+                if(probeStuckTicks>600 && !searchShot){fprintf(stderr,"TRAPPED_BALL tick=%d x=%.3f y=%.3f mask=%d\n",probeTick,x,y,b->CollisionMask);return_value=2;return;}
                 if(const char* region=OmarchyTable::InvalidRegion(b)){
                     fprintf(stderr,"INVALID_REGION %s tick=%d x=%.3f y=%.3f mask=%d\n",region,probeTick,x,y,b->CollisionMask);
                     return_value=2;return;
@@ -997,7 +1002,8 @@ if(OmarchyTable::Enabled && ImGui::MenuItem("How to play")){pause(false);showCir
         ImGui::BulletText("Too much nudging tilts: flippers and scoring lock until the next ball.");
         ImGui::BulletText("Bumpers: 100. Twelve hits: circuit bonus +2500.");
         ImGui::BulletText("Targets: 250. All eight targets: system bonus +5000.");
-        ImGui::BulletText("Right orbit: 1000. Upper left ramp: 1500.");
+        ImGui::BulletText("Launch through the right orbit: 1000. Upper left ramp: 1500.");
+        ImGui::BulletText("A ball that rests in play is kicked free after a few seconds.");
         ImGui::TextUnformatted("High scores persist. Unfinished games do not resume.");
         if(ImGui::Button("Close"))ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
