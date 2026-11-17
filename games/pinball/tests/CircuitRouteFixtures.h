@@ -15,6 +15,9 @@ inline const std::vector<Route>& Routes() {
   {"left loop", {{216,536},{286,404},{284,370},{274,336},{264,320}}},
   {"left inlane", {{244,710},{282,770},{344,844}}},
   {"left outlane", {{164,650},{124,976}}},
+  // The outlane must be enterable from the lane above it, between the island
+  // tip post and the divider post, not merely clear along its own length.
+  {"left outlane entry", {{246,548},{201,574},{166,640}}},
   {"right inlane", {{810,680},{802,736},{736,824}}},
   {"right outlane", {{860,676},{886,870},{886,930}}},
   {"module back", {{816,324},{820,436}}},

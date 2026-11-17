@@ -131,7 +131,7 @@ impl eframe::App for Arcade {
         if let Some(a) = self.active.as_mut() {
             a.app.prepare_style(ctx);
         }
-        if let Some(a) = self.active.as_ref() {
+        if let Some(a) = self.active.as_mut() {
             egui::TopBottomPanel::top("arcade-navigation")
                 .frame(
                     egui::Frame::NONE
@@ -156,6 +156,7 @@ impl eframe::App for Arcade {
                                 arcade_presentation::BRASS
                             },
                         ));
+                        a.app.toolbar(ui);
                     });
                 });
         }

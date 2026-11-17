@@ -5,6 +5,8 @@
 #include "winmain.h"
 #include "pb.h"
 #include "options.h"
+#include "fullscrn.h"
+#include "OmarchyTable.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <cerrno>
@@ -126,7 +128,11 @@ bool BeginFrame(SDL_Renderer* renderer){
         surface=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA8888,SDL_TEXTUREACCESS_TARGET,width,height);
         resizePending=false;
     }
+    const bool created=surface&&SDL_GetRenderTarget(renderer)!=surface;
     if(!surface||SDL_SetRenderTarget(renderer,surface)!=0){quit();return false;}
+    // The classic table scales its own screen from the renderer output size.
+    // Recompute it against the bridge surface, which has no window events.
+    if(created&&!OmarchyTable::Enabled)fullscrn::window_size_changed();
     auto& io=ImGui::GetIO();io.DisplaySize=ImVec2(width,height);io.DisplayFramebufferScale=ImVec2(1,1);io.DeltaTime=1.f/60;
     return true;
 }

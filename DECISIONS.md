@@ -517,3 +517,80 @@ and intercepts native close and Ctrl+Q until cleanup completes. Screenshot exit
 uses the same path. A later quit request upgrades return-home intent. Preserve
 on_exit/game/lock destruction order and keep synchronous Drop as a forced-teardown
 fallback. No engine/physics/save-format change; native acceptance remains separate.
+
+## Circuit physics review and Space Cadet proportions (17 November 2026)
+
+User asked for a Pinball review and then for the fixes judged best for a faithful
+build. The upstream collision solver and integrator are unchanged; edits are
+authored table data and Circuit-only gates.
+
+- Open the left outlane at the gap drawn between the island tip post and the
+  divider post; seal the island base. The island cap stays decoration, out of play.
+- Slope every level playable edge (loop floor, plinth rear, left tube-support
+  cap). Add a ball search: a ball rested 6.5 s in open play, off the plunger and
+  with no flipper raised, gets a small kick. This revises the earlier "never
+  rescue production balls" rule for play only; the test runner still fails a
+  ball rested five seconds, before the search can act.
+- Register the tube's force field over its whole deck for the authored table.
+  Imported resources keep the original partial registration.
+- Each accepted nudge costs 0.3 tilt; holding supplies the rest so a rested hold
+  still tilts at 1.75 s. Tapping no longer bypasses tilt.
+- Gravity 25·sin(0.804), drag 0.2 and 40/80 ms flipper strokes: the Space Cadet
+  reference values rescaled by ball radius (0.45 against 0.30). Plunger charges
+  in 50 steps over 1.25 s with the 0.75 s release window unchanged.
+- The right orbit is the shooter lane and cannot be reached from the flippers,
+  so its 1,000 is described as a launch award. No new shot was invented.
+- Not changed: artwork, flipper geometry (the centre gap stays 5.1 ball
+  diameters against Space Cadet's 2.6), bumper and sling strengths, scoring values.
+- Headless evidence only: 21 CTest targets and 80 random-input three-ball games.
+  Hands-on feel, audio and Omarchy desktop acceptance remain open.
+
+## Circuit: remaining Space Cadet reference values (17 November 2026)
+
+User asked for Circuit to be as close to Space Cadet as possible. Layout, missions
+and artwork cannot be Space Cadet's: the project bundles no original resources.
+What can match is how the ball behaves, so the remaining authored values now come
+from the reference table in `games/pinball/Doc/.dat dump.txt`, speeds scaled 1.5
+for the larger ball.
+
+- Surfaces: default 0.95/0.6 for walls, bumpers, rebounds and targets; 0.5/0.75
+  flippers; 0.9/0.8 one-way gate. Bumpers 2.5 threshold / 17 boost, rebounds
+  1 / 18, target threshold 3, flipper strike 0.9, bumper recovery 0.1 s.
+- Flipper tips moved inward so the clear gap is 2.56 ball diameters; pivots and
+  angles stay on the artwork. Plunger adds 1.5 per 25 ms (1.7 s to full).
+- Return guides end tangent to the flipper pivots, removing a notch that held a
+  ball released from a raised flipper.
+- The plinth, loop floor and support shed use elasticity 0.9: at 0.6 the solver
+  creeps a ball on slopes under 22 degrees. The plinth bevel is now about ten.
+- Kept as deliberate differences: passive targets (no reference boost of 5),
+  Circuit's tilt grace, the 0.8 s drain delay (there is no bonus count to fill
+  the reference 1.82 s), and the ball search in place of the reference rescue.
+- Headless evidence: 21 CTest targets, native controls/nudge/resize under Xvfb,
+  80 random-input games. One ball in 240 settled between two bumper skirts and
+  was freed by the ball search. Hands-on feel and desktop acceptance remain open.
+
+## Classic Space Cadet table inside the Arcade (17 November 2026)
+
+User asked for a classic table option. The Arcade still bundles no original
+resources; this only lets the player point at their own.
+
+- A game-owned `Table` button in the host navigation bar (new optional
+  `ArcadeGame::toolbar`) opens a dialog: Circuit, or Classic with a folder. The
+  playfield layout and every existing pinball screenshot region are unchanged.
+- Classic starts the same worker without `--omarchy-table`, in the data folder,
+  exactly as the standalone launcher does. Circuit and classic settings and high
+  scores stay in their existing separate directories.
+- The folder is validated for a DAT file before launch and stored in the
+  launcher's existing `omarchy-spacecadet/data-directory`; the table choice goes
+  in a new `arcade-table` beside it. Both are written only after the chosen
+  table has drawn a frame, so a folder that cannot run is never remembered.
+- Changing table ends the current game after an explicit choice; the new worker
+  starts only once the old one has exited. A failed classic start offers
+  "Play Circuit instead".
+- The bridge rescales the classic screen to its render surface, which receives
+  no window-size events.
+- Evidence: unit tests for validation, discovery, persistence and worker
+  arguments; the dialog, rejected folder, launch in the folder and recovery were
+  driven in the real window under Xvfb with a placeholder DAT. The classic table
+  itself has not been run through the bridge here: no original data is
+  available in this environment. That is a desktop acceptance item.

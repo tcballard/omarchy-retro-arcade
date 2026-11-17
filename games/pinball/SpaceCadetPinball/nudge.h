@@ -17,6 +17,8 @@ public:
 	// Circuit counts held input separately from the short physical shake pulse.
 	static unsigned held_inputs;
 	static constexpr float CircuitTiltHoldSeconds = 1.75f;
+	// Each accepted shake also costs this much, so tapping cannot bypass tilt.
+	static constexpr float CircuitTiltPressCost = 0.3f;
 private:
 	static void _nudge(float x, float y);
 	static int timer;

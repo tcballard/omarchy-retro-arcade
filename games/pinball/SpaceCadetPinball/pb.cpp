@@ -311,7 +311,11 @@ void pb::frame(float dtMilliSec)
 
 	if (OmarchyTable::Enabled ? nudge::held_inputs != 0 : (nudge::nudged_left || nudge::nudged_right || nudge::nudged_up))
 	{
-		const float buildupRate = OmarchyTable::Enabled ? 1.0f / nudge::CircuitTiltHoldSeconds : 4.0f;
+		// A press costs CircuitTiltPressCost up front; holding supplies the rest
+		// so that one rested, held shake still tilts at CircuitTiltHoldSeconds.
+		const float buildupRate = OmarchyTable::Enabled
+			? (1.0f - nudge::CircuitTiltPressCost) / nudge::CircuitTiltHoldSeconds
+			: 4.0f;
 		nudge::nudge_count += dtSec * buildupRate;
 	}
 	else
@@ -359,7 +363,8 @@ void pb::timed_frame(float timeDelta)
 				ball->StuckCounter = 0;
 			else
 				ball->StuckCounter++;
-			if(!OmarchyTable::Enabled) control::UnstuckBall(*ball, time_ticks - ball->LastActiveTime);
+			if (OmarchyTable::Enabled) OmarchyTable::BallSearch(*ball, time_ticks - ball->LastActiveTime);
+			else control::UnstuckBall(*ball, time_ticks - ball->LastActiveTime);
 		}
 	}
 
@@ -613,19 +618,19 @@ void pb::InputDown(GameInput input)
 			break;
 		case GameBindings::LeftTableBump:
 			if (!MainTable->TiltLockFlag) {
-				if (OmarchyTable::Enabled) nudge::held_inputs |= 1u;
+				if (OmarchyTable::Enabled) { if (!(nudge::held_inputs & 1u)) nudge::nudge_count += nudge::CircuitTiltPressCost; nudge::held_inputs |= 1u; }
 				nudge::nudge_right();
 			}
 			break;
 		case GameBindings::RightTableBump:
 			if (!MainTable->TiltLockFlag) {
-				if (OmarchyTable::Enabled) nudge::held_inputs |= 2u;
+				if (OmarchyTable::Enabled) { if (!(nudge::held_inputs & 2u)) nudge::nudge_count += nudge::CircuitTiltPressCost; nudge::held_inputs |= 2u; }
 				nudge::nudge_left();
 			}
 			break;
 		case GameBindings::BottomTableBump:
 			if (!MainTable->TiltLockFlag) {
-				if (OmarchyTable::Enabled) nudge::held_inputs |= 4u;
+				if (OmarchyTable::Enabled) { if (!(nudge::held_inputs & 4u)) nudge::nudge_count += nudge::CircuitTiltPressCost; nudge::held_inputs |= 4u; }
 				nudge::nudge_up();
 			}
 			break;

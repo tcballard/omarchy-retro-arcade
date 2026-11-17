@@ -93,7 +93,7 @@ with tempfile.TemporaryDirectory() as tmp:
                 rest=coil(advance(.2,w,h),w,h)
                 command("key 32 1 0")
                 partial=coil(advance(.2,w,h),w,h)
-                held=coil(advance(1.5,w,h),w,h)
+                held=coil(advance(2.0,w,h),w,h)  # full charge takes 1.7 s
                 assert partial!=rest and partial!=held, "Spring does not track partial charge"
                 assert held!=rest, "Spring does not visibly compress while Space is held"
                 assert coil(advance(.3,w,h),w,h)==held, "Fully charged spring glitches while held"
