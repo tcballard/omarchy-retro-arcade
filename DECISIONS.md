@@ -568,3 +568,29 @@ for the larger ball.
 - Headless evidence: 21 CTest targets, native controls/nudge/resize under Xvfb,
   80 random-input games. One ball in 240 settled between two bumper skirts and
   was freed by the ball search. Hands-on feel and desktop acceptance remain open.
+
+## Classic Space Cadet table inside the Arcade (17 November 2026)
+
+User asked for a classic table option. The Arcade still bundles no original
+resources; this only lets the player point at their own.
+
+- A game-owned `Table` button in the host navigation bar (new optional
+  `ArcadeGame::toolbar`) opens a dialog: Circuit, or Classic with a folder. The
+  playfield layout and every existing pinball screenshot region are unchanged.
+- Classic starts the same worker without `--omarchy-table`, in the data folder,
+  exactly as the standalone launcher does. Circuit and classic settings and high
+  scores stay in their existing separate directories.
+- The folder is validated for a DAT file before launch and stored in the
+  launcher's existing `omarchy-spacecadet/data-directory`; the table choice goes
+  in a new `arcade-table` beside it. Both are written only after the chosen
+  table has drawn a frame, so a folder that cannot run is never remembered.
+- Changing table ends the current game after an explicit choice; the new worker
+  starts only once the old one has exited. A failed classic start offers
+  "Play Circuit instead".
+- The bridge rescales the classic screen to its render surface, which receives
+  no window-size events.
+- Evidence: unit tests for validation, discovery, persistence and worker
+  arguments; the dialog, rejected folder, launch in the folder and recovery were
+  driven in the real window under Xvfb with a placeholder DAT. The classic table
+  itself has not been run through the bridge here: no original data is
+  available in this environment. That is a desktop acceptance item.

@@ -21,6 +21,8 @@ pub(crate) trait ArcadeGame: eframe::App {
     fn finished(&mut self) -> bool {
         false
     }
+    /// Optional game-owned controls in the host navigation bar.
+    fn toolbar(&mut self, _: &mut egui::Ui) {}
 }
 impl ArcadeGame for omarchy_stack::app::StackApp {
     fn suspend(&mut self) {
@@ -111,6 +113,9 @@ impl ArcadeGame for pinball::Pinball {
     }
     fn suspend(&mut self) {
         self.pause();
+    }
+    fn toolbar(&mut self, ui: &mut egui::Ui) {
+        self.toolbar(ui);
     }
 }
 impl ArcadeGame for omarchy_snake::app::SnakeApp {

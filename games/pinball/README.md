@@ -29,7 +29,7 @@ Circuit uses the upstream game's session handling: high scores and settings pers
     omarchy-spacecadet --classic --data-dir /path/to/original-resources
     omarchy-spacecadet --experimental
 
-Classic mode loads your original Space Cadet or Full Tilt resources. Experimental mode preserves the earlier separate physics prototype and its saves. Neither is used for default play.
+Classic mode loads your original Space Cadet or Full Tilt resources. Inside Omarchy Arcade, the **Table** button in the navigation bar offers the same choice: pick "Classic Space Cadet", enter the folder holding your own PINBALL.DAT (or CADET.DAT) and its sound files, and the unmodified engine runs that table in the Arcade window. The folder is shared with the standalone launcher and the choice is remembered once the table has started. The original game files are not included and are never downloaded. Experimental mode preserves the earlier separate physics prototype and its saves. Neither is used for default play.
 
 ## Implementation and verification
 

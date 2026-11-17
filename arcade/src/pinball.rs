@@ -3,7 +3,7 @@ use std::{
     collections::HashSet,
     fmt::Write as _,
     io::{self, Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::{mpsc, Arc, Mutex},
     thread,
@@ -67,6 +67,105 @@ fn helper() -> io::Result<PathBuf> {
             "Circuit engine is missing. Reinstall Omarchy Arcade.",
         )
     })
+}
+/// Which table the worker runs. Circuit is bundled; the classic table needs
+/// the player's own Space Cadet files, which are never distributed here.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Table {
+    Circuit,
+    Classic,
+}
+const DATA_FILES: [&str; 6] = [
+    "PINBALL.DAT",
+    "pinball.dat",
+    "CADET.DAT",
+    "cadet.dat",
+    "DEMO.DAT",
+    "demo.dat",
+];
+fn valid_data_dir(path: &Path) -> bool {
+    path.is_dir() && DATA_FILES.iter().any(|name| path.join(name).is_file())
+}
+fn home_join(variable: &str, fallback: &str) -> PathBuf {
+    std::env::var_os(variable)
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(fallback)
+        })
+}
+/// The standalone launcher's directory, so both remember the same folder.
+fn config_dir() -> PathBuf {
+    home_join("XDG_CONFIG_HOME", ".config").join("omarchy-spacecadet")
+}
+fn expand(text: &str) -> PathBuf {
+    let text = text.trim();
+    match text.strip_prefix("~/") {
+        Some(rest) => PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(rest),
+        None => PathBuf::from(text),
+    }
+}
+fn read_line(path: &Path) -> Option<String> {
+    let bytes = arcade_platform::storage::read_bounded(path, 4096).ok()?;
+    let text = String::from_utf8(bytes).ok()?;
+    let line = text.lines().next()?.trim();
+    (!line.is_empty()).then(|| line.to_owned())
+}
+/// The saved folder first, then the places the standalone launcher searches.
+fn find_data_dir(config: &Path, data_home: &Path) -> Option<PathBuf> {
+    read_line(&config.join("data-directory"))
+        .map(PathBuf::from)
+        .into_iter()
+        .chain([
+            data_home.join("omarchy-spacecadet"),
+            PathBuf::from("/usr/share/SpaceCadetPinball"),
+            PathBuf::from("/usr/local/share/SpaceCadetPinball"),
+        ])
+        .find(|p| valid_data_dir(p))
+}
+fn saved_table(config: &Path) -> Table {
+    match read_line(&config.join("arcade-table")).as_deref() {
+        Some("classic") => Table::Classic,
+        _ => Table::Circuit,
+    }
+}
+fn save_choice(config: &Path, table: Table, data: Option<&Path>) -> Result<(), String> {
+    if let (Table::Classic, Some(dir)) = (table, data) {
+        let line = format!("{}\n", dir.display());
+        arcade_platform::storage::atomic_write(&config.join("data-directory"), line.as_bytes())?;
+    }
+    let name = if table == Table::Classic {
+        "classic\n"
+    } else {
+        "circuit\n"
+    };
+    arcade_platform::storage::atomic_write(&config.join("arcade-table"), name.as_bytes())
+}
+/// Classic mode is the unmodified engine started in the data folder, exactly
+/// as the standalone launcher starts it.
+fn worker_command(helper: &Path, classic: Option<&Path>) -> Command {
+    let mut command = Command::new(helper);
+    command.arg("--arcade-bridge");
+    match classic {
+        Some(dir) => {
+            command.current_dir(dir);
+        }
+        None => {
+            command.arg("--omarchy-table");
+        }
+    }
+    command
+}
+struct TableDialog {
+    choice: Table,
+    folder: String,
+    problem: Option<String>,
+    browse: Option<mpsc::Receiver<Option<String>>>,
+}
+struct Link {
+    worker: Worker,
+    pixels: Arc<Mutex<Option<FramePixels>>>,
+    errors: mpsc::Receiver<String>,
 }
 #[derive(Default)]
 struct Shutdown {
@@ -146,6 +245,15 @@ pub struct Pinball {
     started: Instant,
     requested_size: [usize; 2],
     resize_candidate: ([usize; 2], Instant),
+    table: Table,
+    data_dir: Option<PathBuf>,
+    config: PathBuf,
+    dialog: Option<TableDialog>,
+    switching: Option<(Table, Option<PathBuf>)>,
+    /// A changed table is remembered only once it has drawn a frame, so a
+    /// folder that cannot run is never what the next visit starts with.
+    unsaved: bool,
+    notice: Option<String>,
 }
 impl Pinball {
     pub fn begin_shutdown(&mut self) {
@@ -159,6 +267,11 @@ impl Pinball {
         self.texture.is_some() || self.error.is_some()
     }
     pub fn finished(&mut self) -> bool {
+        // The outgoing worker of a table change exits cleanly; that is not
+        // the player finishing with pinball.
+        if self.switching.is_some() {
+            return false;
+        }
         self.worker
             .child
             .try_wait()
@@ -185,9 +298,8 @@ impl Pinball {
         self.held_keys.clear();
         self.send("blur".into());
     }
-    pub fn new(ctx: &egui::Context) -> io::Result<Self> {
-        let mut child = Command::new(helper()?)
-            .args(["--arcade-bridge", "--omarchy-table"])
+    fn spawn(ctx: &egui::Context, classic: Option<&Path>) -> io::Result<Link> {
+        let mut child = worker_command(&helper()?, classic)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -219,13 +331,13 @@ impl Pinball {
                     ctx.request_repaint();
                 }
                 Err(e) => {
-                    let _ = tx.send(format!("Circuit stopped: {e}"));
+                    let _ = tx.send(format!("Pinball stopped: {e}"));
                     ctx.request_repaint();
                     break;
                 }
             }
         });
-        Ok(Self {
+        Ok(Link {
             worker: Worker {
                 shutdown: Shutdown::default(),
                 child,
@@ -235,6 +347,22 @@ impl Pinball {
             },
             pixels,
             errors,
+        })
+    }
+    pub fn new(ctx: &egui::Context) -> io::Result<Self> {
+        let config = config_dir();
+        let data_dir = find_data_dir(&config, &home_join("XDG_DATA_HOME", ".local/share"));
+        // Remembered classic play needs its folder to still be there.
+        let table = match (saved_table(&config), &data_dir) {
+            (Table::Classic, Some(_)) => Table::Classic,
+            _ => Table::Circuit,
+        };
+        let classic = data_dir.as_deref().filter(|_| table == Table::Classic);
+        let link = Self::spawn(ctx, classic)?;
+        Ok(Self {
+            worker: link.worker,
+            pixels: link.pixels,
+            errors: link.errors,
             texture: None,
             error: None,
             focused: true,
@@ -244,7 +372,159 @@ impl Pinball {
             started: Instant::now(),
             requested_size: [WIDTH, HEIGHT],
             resize_candidate: ([WIDTH, HEIGHT], Instant::now()),
+            table,
+            data_dir,
+            config,
+            dialog: None,
+            switching: None,
+            unsaved: false,
+            notice: None,
         })
+    }
+    /// Host navigation bar: the current table and the way to change it.
+    pub fn toolbar(&mut self, ui: &mut egui::Ui) {
+        let label = match self.table {
+            Table::Circuit => "Table: Circuit",
+            Table::Classic => "Table: Classic",
+        };
+        let button = ui
+            .button(label)
+            .on_hover_text("Choose the Circuit table or your own Space Cadet files");
+        if button.has_focus() {
+            // Space launches the ball; it must never re-press this button.
+            button.surrender_focus();
+        }
+        if button.clicked() && self.dialog.is_none() && self.switching.is_none() {
+            self.pause();
+            self.dialog = Some(TableDialog {
+                choice: self.table,
+                folder: self
+                    .data_dir
+                    .as_ref()
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_default(),
+                problem: None,
+                browse: None,
+            });
+        }
+        if let Some(notice) = &self.notice {
+            ui.label(notice);
+        }
+    }
+    fn begin_switch(&mut self, table: Table, data: Option<PathBuf>) {
+        self.release_pointer();
+        self.held_keys.clear();
+        self.worker.begin_shutdown();
+        self.switching = Some((table, data));
+        self.texture = None;
+        self.error = None;
+    }
+    /// Start the chosen table once the previous worker has fully stopped, so
+    /// two engines never share the audio device or a settings file.
+    fn poll_switch(&mut self, ctx: &egui::Context) {
+        if self.switching.is_none() || !self.worker.poll_shutdown() {
+            return;
+        }
+        let (table, data) = self.switching.take().expect("pending table");
+        let classic = data.as_deref().filter(|_| table == Table::Classic);
+        match Self::spawn(ctx, classic) {
+            Ok(link) => {
+                self.worker = link.worker;
+                self.pixels = link.pixels;
+                self.errors = link.errors;
+                self.table = table;
+                if table == Table::Classic {
+                    self.data_dir = data;
+                }
+                self.started = Instant::now();
+                self.requested_size = [WIDTH, HEIGHT];
+                self.unsaved = true;
+            }
+            Err(e) => self.error = Some(format!("Could not start the table: {e}")),
+        }
+    }
+    fn table_dialog(&mut self, ctx: &egui::Context) {
+        let Some(dialog) = self.dialog.as_mut() else {
+            return;
+        };
+        if let Some(Ok(result)) = dialog.browse.as_ref().map(|r| r.try_recv()) {
+            if let Some(folder) = result {
+                dialog.folder = folder;
+            }
+            dialog.browse = None;
+        }
+        let mut play = false;
+        let mut cancel = ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, Key::Escape));
+        egui::Modal::new(egui::Id::new("pinball-table")).show(ctx, |ui| {
+            ui.set_max_width(520.);
+            ui.heading("Pinball table");
+            ui.radio_value(&mut dialog.choice, Table::Circuit, "Circuit (included)");
+            ui.radio_value(
+                &mut dialog.choice,
+                Table::Classic,
+                "Classic Space Cadet (your own game files)",
+            );
+            if dialog.choice == Table::Classic {
+                ui.label(
+                    "Omarchy Arcade does not include the original game. Enter the folder \
+                     that holds your copy: PINBALL.DAT (or CADET.DAT) with its sound files.",
+                );
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut dialog.folder)
+                            .hint_text("/path/to/your/Space Cadet folder")
+                            .desired_width(360.),
+                    );
+                    if dialog.browse.is_none() && ui.button("Browse…").clicked() {
+                        let (tx, rx) = mpsc::channel();
+                        let ctx = ctx.clone();
+                        thread::spawn(move || {
+                            let chosen = Command::new("zenity")
+                                .args(["--file-selection", "--directory"])
+                                .arg("--title=Choose your Space Cadet folder")
+                                .output()
+                                .ok()
+                                .filter(|o| o.status.success())
+                                .and_then(|o| String::from_utf8(o.stdout).ok())
+                                .map(|s| s.trim().to_owned())
+                                .filter(|s| !s.is_empty());
+                            let _ = tx.send(chosen);
+                            ctx.request_repaint();
+                        });
+                        dialog.browse = Some(rx);
+                    }
+                });
+                ui.small("Browse needs zenity; typing or pasting the path always works.");
+            }
+            if let Some(problem) = &dialog.problem {
+                ui.colored_label(ui.visuals().warn_fg_color, problem);
+            }
+            ui.label("Changing table ends the current game. High scores and settings are kept.");
+            ui.horizontal(|ui| {
+                play = ui.button("Play this table").clicked();
+                cancel |= ui.button("Cancel (Esc)").clicked();
+            });
+        });
+        if cancel {
+            self.dialog = None;
+            return;
+        }
+        if !play {
+            return;
+        }
+        let choice = dialog.choice;
+        let folder = expand(&dialog.folder);
+        if choice == Table::Classic && !valid_data_dir(&folder) {
+            dialog.problem =
+                Some("That folder has no PINBALL.DAT, CADET.DAT or DEMO.DAT in it.".into());
+            return;
+        }
+        self.dialog = None;
+        let unchanged = choice == self.table
+            && (choice == Table::Circuit || self.data_dir.as_deref() == Some(folder.as_path()));
+        if !unchanged {
+            self.begin_switch(choice, (choice == Table::Classic).then_some(folder));
+        }
     }
     fn send(&mut self, command: String) {
         if self.error.is_none() {
@@ -331,12 +611,28 @@ fn key_transition(held: &mut HashSet<Key>, key: Key, pressed: bool) -> Option<i3
 }
 impl eframe::App for Pinball {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+        self.poll_switch(ctx);
+        self.table_dialog(ctx);
         if let Ok(e) = self.errors.try_recv() {
-            self.error = Some(e);
+            // The outgoing worker's end of stream is expected during a change.
+            if self.switching.is_none() {
+                self.error = Some(e);
+            }
+        }
+        if self.switching.is_some() {
+            egui::CentralPanel::default()
+                .frame(egui::Frame::NONE.fill(egui::Color32::from_rgb(5, 8, 8)))
+                .show(ctx, |ui| {
+                    ui.centered_and_justified(|ui| {
+                        ui.label("Changing table…");
+                    });
+                });
+            ctx.request_repaint_after(Duration::from_millis(10));
+            return;
         }
         if self.texture.is_none() && self.started.elapsed() > Duration::from_secs(15) {
             self.error.get_or_insert(
-                "Circuit did not produce a frame. Return to Arcade and try again.".into(),
+                "Pinball did not produce a frame. Return to Arcade and try again.".into(),
             );
         }
         if let Some(bytes) = self.pixels.lock().ok().and_then(|mut p| p.take()) {
@@ -347,8 +643,13 @@ impl eframe::App for Pinball {
                 self.texture =
                     Some(ctx.load_texture("circuit-live", image, egui::TextureOptions::LINEAR));
             }
+            if std::mem::take(&mut self.unsaved) {
+                self.notice = save_choice(&self.config, self.table, self.data_dir.as_deref())
+                    .err()
+                    .map(|e| format!("Table choice was not saved: {e}"));
+            }
         }
-        let focused = ctx.input(|i| i.focused) && self.input_enabled;
+        let focused = ctx.input(|i| i.focused) && self.input_enabled && self.dialog.is_none();
         if self.focused && !focused {
             self.pause();
         }
@@ -356,9 +657,18 @@ impl eframe::App for Pinball {
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(egui::Color32::from_rgb(5, 8, 8)))
             .show(ctx, |ui| {
-                if let Some(error) = &self.error {
-                    ui.heading("Circuit needs attention");
+                if let Some(error) = self.error.clone() {
+                    ui.heading("Pinball needs attention");
                     ui.label(error);
+                    if self.table == Table::Classic {
+                        ui.label(
+                            "The classic table could not run from the chosen folder. Check \
+                             that it holds a complete copy of the original game.",
+                        );
+                        if ui.button("Play Circuit instead").clicked() {
+                            self.begin_switch(Table::Circuit, None);
+                        }
+                    }
                     ui.label("Use Back to Arcade to choose another game.");
                     return;
                 }
@@ -470,6 +780,52 @@ impl eframe::App for Pinball {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn classic_data_folder_is_validated_found_and_remembered() {
+        let root = tempfile::tempdir().unwrap();
+        let (config, data_home) = (root.path().join("config"), root.path().join("data"));
+        let (empty, game) = (root.path().join("empty"), root.path().join("game"));
+        std::fs::create_dir_all(&empty).unwrap();
+        std::fs::create_dir_all(&game).unwrap();
+        std::fs::write(game.join("pinball.dat"), b"x").unwrap();
+        assert!(!valid_data_dir(&empty) && !valid_data_dir(&root.path().join("missing")));
+        assert!(valid_data_dir(&game));
+        // Nothing saved and nothing installed: Circuit, no folder.
+        assert_eq!(saved_table(&config), Table::Circuit);
+        assert_eq!(find_data_dir(&config, &data_home), None);
+        // Choosing Circuit never records a folder.
+        save_choice(&config, Table::Circuit, Some(&game)).unwrap();
+        assert_eq!(find_data_dir(&config, &data_home), None);
+        save_choice(&config, Table::Classic, Some(&game)).unwrap();
+        assert_eq!(saved_table(&config), Table::Classic);
+        assert_eq!(find_data_dir(&config, &data_home), Some(game.clone()));
+        // Returning to Circuit keeps the folder for next time.
+        save_choice(&config, Table::Circuit, None).unwrap();
+        assert_eq!(saved_table(&config), Table::Circuit);
+        assert_eq!(find_data_dir(&config, &data_home), Some(game.clone()));
+        // A saved folder that has since lost its data is not offered.
+        std::fs::remove_file(game.join("pinball.dat")).unwrap();
+        assert_eq!(find_data_dir(&config, &data_home), None);
+        // The standalone launcher's default location is found without saving.
+        let installed = data_home.join("omarchy-spacecadet");
+        std::fs::create_dir_all(&installed).unwrap();
+        std::fs::write(installed.join("CADET.DAT"), b"x").unwrap();
+        assert_eq!(find_data_dir(&config, &data_home), Some(installed));
+    }
+    #[test]
+    fn classic_worker_runs_the_unmodified_engine_in_the_data_folder() {
+        let args = |c: &Command| {
+            c.get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+        };
+        let circuit = worker_command(Path::new("/engine"), None);
+        assert_eq!(args(&circuit), ["--arcade-bridge", "--omarchy-table"]);
+        assert_eq!(circuit.get_current_dir(), None);
+        let classic = worker_command(Path::new("/engine"), Some(Path::new("/games/cadet")));
+        assert_eq!(args(&classic), ["--arcade-bridge"]);
+        assert_eq!(classic.get_current_dir(), Some(Path::new("/games/cadet")));
+    }
     #[test]
     fn names_preserve_utf8_and_cannot_inject_bridge_commands() {
         assert_eq!(
