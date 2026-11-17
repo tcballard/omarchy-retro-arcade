@@ -544,3 +544,27 @@ authored table data and Circuit-only gates.
   diameters against Space Cadet's 2.6), bumper and sling strengths, scoring values.
 - Headless evidence only: 21 CTest targets and 80 random-input three-ball games.
   Hands-on feel, audio and Omarchy desktop acceptance remain open.
+
+## Circuit: remaining Space Cadet reference values (17 November 2026)
+
+User asked for Circuit to be as close to Space Cadet as possible. Layout, missions
+and artwork cannot be Space Cadet's: the project bundles no original resources.
+What can match is how the ball behaves, so the remaining authored values now come
+from the reference table in `games/pinball/Doc/.dat dump.txt`, speeds scaled 1.5
+for the larger ball.
+
+- Surfaces: default 0.95/0.6 for walls, bumpers, rebounds and targets; 0.5/0.75
+  flippers; 0.9/0.8 one-way gate. Bumpers 2.5 threshold / 17 boost, rebounds
+  1 / 18, target threshold 3, flipper strike 0.9, bumper recovery 0.1 s.
+- Flipper tips moved inward so the clear gap is 2.56 ball diameters; pivots and
+  angles stay on the artwork. Plunger adds 1.5 per 25 ms (1.7 s to full).
+- Return guides end tangent to the flipper pivots, removing a notch that held a
+  ball released from a raised flipper.
+- The plinth, loop floor and support shed use elasticity 0.9: at 0.6 the solver
+  creeps a ball on slopes under 22 degrees. The plinth bevel is now about ten.
+- Kept as deliberate differences: passive targets (no reference boost of 5),
+  Circuit's tilt grace, the 0.8 s drain delay (there is no bonus count to fill
+  the reference 1.82 s), and the ball search in place of the reference rescue.
+- Headless evidence: 21 CTest targets, native controls/nudge/resize under Xvfb,
+  80 random-input games. One ball in 240 settled between two bumper skirts and
+  was freed by the ball search. Hands-on feel and desktop acceptance remain open.

@@ -33,20 +33,23 @@ inline const std::vector<Wall>& Walls() {
         // above the outlane, so the decorative cap there is never in play.
         {"left_island_base", {{192,550},{144,550}}, false,3},
         {"left_inlane", {{300,420},{302,535},{281,724},{291,759},{355,815}}, false,3},
-        {"left_return", {{203,771},{330,868}}, false,3},
+        // Each return guide ends tangent to its flipper's pivot circle (radius
+        // 17.5 px at 340,888 and 720,888). Ending short of that left a notch
+        // between guide and pivot where a slow or released ball came to rest.
+        {"left_return", {{203,771},{350,874}}, false,3},
         {"right_inlane", {{774,432},{768,574},{788,731},{732,788}}, false,3},
         {"right_outlane", {{840,480},{842,648},{869,842},{875,1045}}, false,3},
-        {"right_return", {{825,784},{731,863}}, false,3},
+        {"right_return", {{825,784},{709,874}}, false,3},
         {"left_apron", {{290,900},{400,990},{475,1030}}, false,3},
         {"right_apron", {{600,1030},{740,948},{765,895}}, false,3},
         // Closed bodies behind the scoring faces, not isolated front edges.
         {"sling_body_left", {{285,588},{298,574},{359,759},{354,776},{273,727},{285,588}}, true,1},
         {"sling_body_right", {{767,583},{777,580},{789,730},{717,778},{701,764},{767,583}}, true,1},
         // The target plinth ends at its rear edge, NOT at the cabinet roof.
-        // Its rear bevel falls 5-7 degrees to the left so a slow ball rolls
+        // Its rear bevel falls about ten degrees to the left so a slow ball rolls
         // into the underpass instead of creeping along a near-level edge.
         // Gaps between the four uprights are narrower than the ball diameter.
-        {"target_bank", {{401,104},{480,94},{611,82},{611,142},{500,142},{481,153},{438,170},{403,174},{391,133},{401,104}}, true,1},
+        {"target_bank", {{401,118},{480,104},{611,82},{611,142},{500,142},{481,153},{438,170},{403,174},{391,133},{401,118}}, true,1},
         {"module_bank", {{755,267},{810,278},{761,428},{721,414},{755,267}}, true,1},
         // The loop floor falls to the right along its whole length: a ball
         // that reaches the closed end rolls back out instead of resting there.

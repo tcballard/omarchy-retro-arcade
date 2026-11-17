@@ -80,6 +80,7 @@ float wx(float x){return (x-540)/25;} float wy(float y){return (y-500)/25;}
 // radii needs 11.99 * 1.5 = 17.98 here, which is 25*sin(.804). Flipper stroke
 // times are the reference values unchanged. The tube keeps its authored extra
 // slope in the same proportion to table gravity as before.
+constexpr float ReferenceScale=1.5f;
 constexpr float TableTilt=.804f, TableDrag=.2f, RampTilt=.279f;
 constexpr float FlipperExtendSeconds=.04f, FlipperRetractSeconds=.08f;
 
@@ -108,21 +109,31 @@ DatFile* Build(){
  auto player=group("player_number1");shorts(player,{(int16_t)digits,550,110,25,20});
  auto info=group("info_text_box");shorts(info,{1500,405,155,185,100,0,0,0,0});object(info,1033);
  auto mission=group("mission_text_box");shorts(mission,{1500,405,270,185,130,0,0,0,0});object(mission,1033);
- auto mat=group(nullptr,300);floats(mat,{301,.95f,302,.8f});
- auto kick=group(nullptr,400);floats(kick,{401,1,402,28});
- auto targetContact=group(nullptr,400);floats(targetContact,{401,1,402,0});
+ // Surface and kicker values are the Space Cadet reference figures. Speeds
+ // (thresholds and boosts) are multiplied by ReferenceScale; restitution and
+ // smoothness are ratios and are used unchanged.
+ //   walls, bumpers, rebounds, targets: engine default .95 smooth / .6 elastic
+ //   one-way gate .9 / .8        flippers .5 / .75
+ //   large bumpers 2.5 threshold, 17 boost     rebounds 1 / 18
+ //   targets 3 threshold (their boost of 5 is not used: see DECISIONS.md)
+ auto mat=group(nullptr,300);floats(mat,{301,.95f,302,.6f});
+ auto gateMat=group(nullptr,300);floats(gateMat,{301,.9f,302,.8f});
+ auto flipperMat=group(nullptr,300);floats(flipperMat,{301,.5f,302,.75f});
+ auto kick=group(nullptr,400);floats(kick,{401,2.5f*ReferenceScale,402,17*ReferenceScale});
+ auto targetContact=group(nullptr,400);floats(targetContact,{401,3*ReferenceScale,402,0});
+ GroupData* railMat=mat;
  // The collision coordinates below are measured against assets/circuit/table.png.
  // The custom view uses the same 25 pixels/world-unit mapping.
  auto rail=[&](const char* name,float x,float y,float xx,float yy,int mask=0,int kicker=-1){
   auto g=group(name);floats(g,{600,2,wx(xx),wy(yy),wx(x),wy(y)});
-  if(kicker>=0)shorts(g,{300,(int16_t)mat->GroupId,400,(int16_t)kicker,602,(int16_t)mask});
-  else shorts(g,{300,(int16_t)mat->GroupId,602,(int16_t)mask});object(g,1000);return g;
+  if(kicker>=0)shorts(g,{300,(int16_t)railMat->GroupId,400,(int16_t)kicker,602,(int16_t)mask});
+  else shorts(g,{300,(int16_t)railMat->GroupId,602,(int16_t)mask});object(g,1000);return g;
  };
  // A capsule chain has two collision faces and a round cap at every
  // endpoint/joint. This is shared by cabinet, lane, obstacle and ramp walls.
  auto cap=[&](const char* name,vector2 point,int layer){
   auto g=group(name);floats(g,{600,1,wx(point.X),wy(point.Y),0});
-  shorts(g,{300,(int16_t)mat->GroupId,602,(int16_t)layer});object(g,1000);
+  shorts(g,{300,(int16_t)railMat->GroupId,602,(int16_t)layer});object(g,1000);
  };
  auto boundary=[&](const char* name,const std::vector<vector2>& pts,int layer){
   for(size_t i=1;i<pts.size();++i){
@@ -131,11 +142,23 @@ DatFile* Build(){
   }
   for(auto point:pts)cap(name,point,layer);
  };
- for(const auto& wall:CircuitGeometry::Walls())for(int layer=0;layer<2;layer++)if(wall.layers&(1<<layer))boundary(wall.name,wall.points,layer);
+ // The solver takes (1 - elasticity) of the normal speed off the whole
+ // speed at each contact, so a ball resting on a slope gentler than
+ // atan(1 - elasticity) only creeps: 22 degrees at the reference .6. The
+ // three bodies whose upper edges are gentler than that (plinth rear, loop
+ // floor, support shed) use a livelier surface so a ball rolls off them.
+ auto slopeMat=group(nullptr,300);floats(slopeMat,{301,.95f,302,.9f});
+ auto surface=[&](const char* name){
+  const std::string n=name;
+  return n=="target_bank"||n=="left_upper_lane"||n=="ramp_support_shed"?slopeMat:mat;
+ };
+ for(const auto& wall:CircuitGeometry::Walls())for(int layer=0;layer<2;layer++)if(wall.layers&(1<<layer)){
+  railMat=surface(wall.name);boundary(wall.name,wall.points,layer);railMat=mat;
+ }
  // An intentional one-way gate at the orbit EXIT, not across its floor:
  // launches pass left into play; field balls cannot re-enter the shooter.
- rail("shooter_gate",655,38,660,106);
- auto slingKick=group(nullptr,400);floats(slingKick,{401,1,402,20});
+ railMat=gateMat;rail("shooter_gate",655,38,660,106);railMat=mat;
+ auto slingKick=group(nullptr,400);floats(slingKick,{401,1*ReferenceScale,402,18*ReferenceScale});
  rail("sling_left",359,759,298,574,0,slingKick->GroupId);
  rail("sling_right",767,583,701,764,0,slingKick->GroupId);
  // Stand-up targets rebound passively through the upstream wall response.
@@ -153,13 +176,16 @@ DatFile* Build(){
  auto plunger=group("plunger");floats(plunger,{600,2,wx(launcherLeft),wy(launcherFloor),wx(launcherRight),wy(launcherFloor)});floats(plunger,{601,wx(CircuitGeometry::LauncherX),wy(launcherFloor-32)});object(plunger,1001);
  bitmap(plunger,45,12,0,0);
  for(int side=0;side<2;side++){
-  float origin=side?720:340,tip=side?598:462;
-  auto g=group(side?"flipper_r":"flipper_l");shorts(g,{100,9,300,(int16_t)mat->GroupId});
-  floats(g,{800,wx(origin),wy(888),.7f});floats(g,{801,wx(tip),wy(943),.42f});floats(g,{802,wx(tip),wy(820),.42f});
-  floats(g,{803,1});floats(g,{804,FlipperExtendSeconds});floats(g,{805,FlipperRetractSeconds});object(g,side?1004:1003);
+  // Pivots stay on the illustrated inlane guides. The tips are placed so
+  // the clear centre gap is the reference 2.56 ball diameters (57.6 px);
+  // rest and raised angles are unchanged.
+  float origin=side?720:340,tip=side?569:491;
+  auto g=group(side?"flipper_r":"flipper_l");shorts(g,{100,9,300,(int16_t)flipperMat->GroupId});
+  floats(g,{800,wx(origin),wy(888),.7f});floats(g,{801,wx(tip),wy(956),.42f});floats(g,{802,wx(tip),wy(804),.42f});
+  floats(g,{803,.9f*ReferenceScale});floats(g,{804,FlipperExtendSeconds});floats(g,{805,FlipperRetractSeconds});object(g,side?1004:1003);
   for(int f=0;f<9;f++){auto state=f?group(nullptr,201):g;bitmap(state,1,1,0,0);}
  }
- for(int i=0;i<4;i++){const auto& bumper=CircuitGeometry::Bumpers()[i];std::string name="bumper"+std::to_string(i);auto g=group(name.c_str());shorts(g,{100,2,300,(int16_t)mat->GroupId,400,(int16_t)kick->GroupId});floats(g,{600,1,wx(bumper.x),wy(bumper.y),bumper.radius/25});floats(g,{407,.12f});object(g,1005);
+ for(int i=0;i<4;i++){const auto& bumper=CircuitGeometry::Bumpers()[i];std::string name="bumper"+std::to_string(i);auto g=group(name.c_str());shorts(g,{100,2,300,(int16_t)mat->GroupId,400,(int16_t)kick->GroupId});floats(g,{600,1,wx(bumper.x),wy(bumper.y),bumper.radius/25});floats(g,{407,.1f});object(g,1005);
   for(int f=0;f<2;f++){auto state=f?group(nullptr,201):g;bitmap(state,1,1,0,0);}
  }
  auto sensor=[&](const char* name,float x,float y,float xx,float yy,int mask=0){
@@ -170,7 +196,9 @@ DatFile* Build(){
  // Elevated ramp: a triangulated upstream TRamp surface follows the artwork.
  // Ground and ramp rails use separate collision masks; TRamp switches them at its portals.
  std::vector<vector2> left,right;CircuitGeometry::RampSides(left,right);
- for(const auto& wall:CircuitGeometry::RampWalls())for(int layer=0;layer<2;layer++)if(wall.layers&(1<<layer))boundary(wall.name,wall.points,layer);
+ for(const auto& wall:CircuitGeometry::RampWalls())for(int layer=0;layer<2;layer++)if(wall.layers&(1<<layer)){
+  railMat=surface(wall.name);boundary(wall.name,wall.points,layer);railMat=mat;
+ }
  // Raised balls may leave the upper portal; ground balls cannot enter it.
  rail("ramp_exit_gate",left.back().X,left.back().Y,right.back().X,right.back().Y);
  auto ramp=group("ramp");shorts(ramp,{602,1});floats(ramp,{701,.04f});floats(ramp,{1305,1});
@@ -224,7 +252,8 @@ const char* InvalidRegion(const TBall* ball){
  if(ball->CollisionMask==2){
   std::vector<vector2> a,b;CircuitGeometry::RampSides(a,b);
   a.insert(a.end(),b.rbegin(),b.rend());
-  if(!inside(a,x,y))return "ramp footprint";
+  // A ball changes layer exactly on a portal edge; that contact is legal.
+  if(!inside(a,x,y) && pathDistance({a.front(),b.front()},x,y)>.3f && pathDistance({a[b.size()-1],b.back()},x,y)>.3f)return "ramp footprint";
  }
  for(const auto& wall:CircuitGeometry::Walls())if(wall.layers&ball->CollisionMask){
   if(wall.solid && inside(wall.points,x,y))return wall.name;
@@ -434,8 +463,8 @@ void ComponentEvent(MessageCode code,TPinballComponent* c){
 void Shutdown(){if(effect){Mix_HaltChannel(-1);Mix_FreeChunk(effect);effect=nullptr;}tone.clear();}
 void TableEvent(MessageCode code){
  if(code==MessageCode::StartGamePlayer1)announce("HOLD SPACE TO LAUNCH");
- if(code==MessageCode::NewGame){// Charge in 50 fine steps over 1.25 seconds instead of nine coarse ones;
-  // the release window is independent of the charge interval.
-  pb::MainTable->Plunger->PullbackDelay=.025f;pb::MainTable->Plunger->PullbackIncrement=2;pb::MainTable->Plunger->MinimumReleaseDelay=.75f;hits=targetMask=orbitCount=rampCount=circuits=0;over=false;debounce.clear();flashes.clear();announce("HOLD SPACE TO LAUNCH");}
+ if(code==MessageCode::NewGame){// The reference plunger adds one unit every 25 ms; scaled, 1.5 here, so a
+  // full charge takes 1.7 seconds. The release window is independent of it.
+  pb::MainTable->Plunger->PullbackDelay=.025f;pb::MainTable->Plunger->PullbackIncrement=ReferenceScale;pb::MainTable->Plunger->MinimumReleaseDelay=.75f;hits=targetMask=orbitCount=rampCount=circuits=0;over=false;debounce.clear();flashes.clear();announce("HOLD SPACE TO LAUNCH");}
 }
 }

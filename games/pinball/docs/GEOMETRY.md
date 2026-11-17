@@ -42,10 +42,14 @@ play. The outlane divider starts at its own post below the tip (artwork
 divider and the island shared one vertex, which sealed the outlane.
 
 No playable edge is level. The loop floor over the island falls to the right
-along its whole length, the target plinth's rear bevel falls five to seven
+along its whole length, the target plinth's rear bevel falls about ten
 degrees to the left, and a sloped shed covers the level cap behind the left
 tube support. The audit checks the island base, the closed loop end and that
 the tube's force field is registered at every centreline knot.
+
+Each return guide ends tangent to its flipper's pivot circle. Ending short of
+it left a notch between guide and pivot where a ball released from a raised
+flipper came to rest instead of rolling down the flipper.
 
 The five-second trapped-ball failure in the test runner fires before the
 6.5-second production ball search, so the search cannot hide a trap from the
